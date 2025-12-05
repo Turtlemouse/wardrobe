@@ -36,7 +36,7 @@ class Database(object):
 
     def __connect(self):
         """Connect to the database"""
-        password = getpass.getpass("ENTER PASSWORD: ")
+        password = self.opts.DB_PASSWORD
         self.conn = pymysql.connect(
             host=self.opts.DB_HOST,
             user=self.opts.DB_USER,

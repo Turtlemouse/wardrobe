@@ -9,7 +9,7 @@ import validation
 
 app = Flask(__name__)
 app.secret_key = "shhhhhh"
-db = Database(config)
+db = None
 
 app.host = config.APP_HOST
 app.port = config.APP_PORT
