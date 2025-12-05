@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, session, flash
+from werkzeug.security import generate_password_hash, check_password_hash
 from supabase_client import supabase
 import os
 
@@ -19,33 +20,61 @@ def index():
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
-    from werkzeug.security import generate_password_hash
-
     if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
-        password_hash = generate_password_hash(password)
+        first = request.form.get("first_name", "").strip()
+        last = request.form.get("last_name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
 
-        result = supabase.table("users").select("*").eq("email", email).execute()
-        if result.data:
-            flash("There is already an account associated with this email!")
+        # ---------------------------
+        # Validate null / empty fields
+        # ---------------------------
+        if not first or not last or not email or not password:
+            flash("All fields are required.")
             return render_template("signup.html")
 
-        result = supabase.table("users").insert({
+        # ---------------------------
+        # Check if email already exists
+        # ---------------------------
+        existing = supabase.table("users") \
+            .select("id") \
+            .eq("email", email) \
+            .execute()
+
+        if existing.data:
+            flash("An account with that email already exists.")
+            return render_template("signup.html")
+
+        # ---------------------------
+        # Create new user
+        # ---------------------------
+        hashed = generate_password_hash(password)
+
+        new_user = supabase.table("users").insert({
             "email": email,
-            "password_hash": password_hash
+            "password_hash": hashed,
+            "first_name": first,
+            "last_name": last
         }).execute()
 
-        user_id = result.data[0]["id"]
+        # Insert returns a list with the created row
+        user = new_user.data[0]
 
-        return redirect("/login")
+        # ---------------------------
+        # Start session
+        # ---------------------------
+        session["user_id"] = user["id"]
+        session["email"] = email
+        session["first_name"] = first
+        session["last_name"] = last
+
+        return redirect("/wardrobe")
 
     return render_template("signup.html")
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    from werkzeug.security import check_password_hash
 
     if request.method == "POST":
         email = request.form["email"]
