@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>
+    {% if symptom %} Edit Symptom {% else %} Add New Symptom {% endif %}
+</h2>
+
+<form method="POST"
+      action="{% if symptom %}/symptoms/{{ symptom.symptom_id }}/edit{% else %}/symptoms/new{% endif %}"
+      class="mt-4">
+
+    <!-- Symptom -->
+    <div class="mb-3">
+        <label class="form-label">Symptom</label>
+        <input name="symptom" class="form-control"
+               value="{{ symptom.symptom if symptom else '' }}" required>
+    </div>
+
+    <button class="btn btn-success">
+        {% if symptom %} Save Changes {% else %} Add Symptom {% endif %}
+    </button>
+
+    <a href="/symptoms" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% endblock %}

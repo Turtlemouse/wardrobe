@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>
+    {% if tutor %} Edit Tutor {% else %} Add New Tutor {% endif %}
+</h2>
+
+<form method="POST"
+      action="{% if tutor %}/tutors/{{ tutor.tutor_id }}/edit{% else %}/tutors/new{% endif %}"
+      class="mt-4">
+
+    <!-- Name -->
+    <div class="mb-3">
+        <label class="form-label">Name *</label>
+        <input name="name" class="form-control"
+               value="{{ tutor.name if tutor else '' }}" required>
+    </div>
+
+    <!-- Email -->
+    <div class="mb-3">
+        <label class="form-label">Email *</label>
+        <input name="email" class="form-control" type="email"
+               value="{{ tutor.email if tutor else '' }}" required>
+    </div>
+
+    <!-- Specialty -->
+    <div class="mb-3">
+        <label class="form-label">Specialty</label>
+        <input name="specialty" class="form-control"
+               value="{{ tutor.specialty if tutor else '' }}">
+    </div>
+
+    <!-- Age -->
+    <div class="mb-3">
+        <label class="form-label">Age</label>
+        <input name="age" type="number" min="0" class="form-control"
+               value="{{ tutor.age if tutor else '' }}">
+    </div>
+
+    <!-- Active -->
+    <div class="mb-3">
+        <label class="form-label">Active</label>
+        <select name="active" class="form-select" required>
+            <option value="1" {% if tutor and tutor.active %}selected{% endif %}>Yes</option>
+            <option value="0" {% if tutor and not tutor.active %}selected{% endif %}>No</option>
+        </select>
+    </div>
+
+    <button class="btn btn-success">
+        {% if tutor %} Save Changes {% else %} Add Tutor {% endif %}
+    </button>
+
+    <a href="/tutors" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% endblock %}

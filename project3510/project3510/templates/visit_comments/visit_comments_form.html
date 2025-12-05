@@ -1,0 +1,69 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>
+    {% if visit_comment %} Edit Visit Comment {% else %} Add New Visit Comment {% endif %}
+</h2>
+
+<form method="POST"
+      action="{% if visit_comment %}/visit_comments/{{ visit_comment.comment_id }}/edit{% else %}/visit_comments/new{% endif %}"
+      class="mt-4">
+
+    <!-- Visit-Counselor Pair Foreign Key (Searchable Dropdown) -->
+    <div class="mb-3">
+        <label class="form-label">Visit & Counselor *</label>
+        <select id="visit_counselor_select" name="visit_counselor_id" class="form-select" required>
+            <option value="">-- Select Visit & Counselor --</option>
+            {% for vc in visit_counselors %}
+            <option value="{{ vc.visit_counselor_id }}" 
+                    data-visit-id="{{ vc.visit_id }}" 
+                    data-counselor-id="{{ vc.counselor_id }}"
+                {% if visit_comment and visit_comment.visit_id == vc.visit_id and visit_comment.counselor_id == vc.counselor_id %}selected{% endif %}>
+                Visit #{{ vc.visit_id }} ({{ vc.visit_date }}) - {{ vc.student_name }} with counselor {{ vc.counselor_name }}
+            </option>
+            {% endfor %}
+        </select>
+        <small class="form-text text-muted">Note: You must first create a Visit-Counselor relationship before adding comments.</small>
+    </div>
+
+    <!-- Hidden fields for visit_id and counselor_id -->
+    <input type="hidden" name="visit_id" id="visit_id" value="{{ visit_comment.visit_id if visit_comment else '' }}">
+    <input type="hidden" name="counselor_id" id="counselor_id" value="{{ visit_comment.counselor_id if visit_comment else '' }}">
+
+    <!-- Comment -->
+    <div class="mb-3">
+        <label class="form-label">Comment *</label>
+        <textarea name="comment" class="form-control" rows="6" required>{{ visit_comment.comment if visit_comment else '' }}</textarea>
+    </div>
+
+    <!-- Select2 and form handling -->
+    <script>
+    $(document).ready(function() {
+        $('#visit_counselor_select').select2({
+            placeholder: "Select or search a visit-counselor pair...",
+            allowClear: true,
+            width: '100%'
+        });
+        
+        // Update hidden fields when selection changes
+        $('#visit_counselor_select').on('change', function() {
+            var selectedOption = $(this).find('option:selected');
+            $('#visit_id').val(selectedOption.data('visit-id'));
+            $('#counselor_id').val(selectedOption.data('counselor-id'));
+        });
+        
+        // Trigger change on page load if there's a selected value
+        if ($('#visit_counselor_select').val()) {
+            $('#visit_counselor_select').trigger('change');
+        }
+    });
+    </script>
+
+    <button class="btn btn-success">
+        {% if visit_comment %} Save Changes {% else %} Add Visit Comment {% endif %}
+    </button>
+
+    <a href="/visit_comments" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% endblock %}

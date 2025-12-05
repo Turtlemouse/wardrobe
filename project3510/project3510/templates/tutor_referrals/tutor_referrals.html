@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>Tutor Referrals</h2>
+
+<a href="/tutor_referrals/new" class="btn btn-primary mb-3">Add Tutor Referral</a>
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Student</th>
+            <th>Date</th>
+            <th>Tutor</th>
+            <th>Resolution Details</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tr in tutor_referrals %}
+        <tr>
+            <td>{{ tr.referral_id }}</td>
+            <td>{{ tr.student_name if tr.student_name else 'N/A' }}</td>
+            <td>{{ tr.date }}</td>
+            <td>{{ tr.tutor_name if tr.tutor_name else 'N/A' }}</td>
+            <td>{{ tr.resolution_details[:50] if tr.resolution_details else 'N/A' }}{% if tr.resolution_details and tr.resolution_details|length > 50 %}...{% endif %}</td>
+            <td>
+                <a href="/tutor_referrals/{{ tr.referral_id }}/edit" class="btn btn-sm btn-warning">Edit</a>
+                <a href="/tutor_referrals/{{ tr.referral_id }}/delete" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

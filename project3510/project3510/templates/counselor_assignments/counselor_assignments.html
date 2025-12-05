@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>Counselor Assignments</h2>
+
+<a class="btn btn-primary mb-3" href="/counselor_assignments/new">Assign Counselor</a>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Student</th>
+            <th>Counselor</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Primary?</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for a in assignments %}
+        <tr>
+            <td>
+                {{ a.student_name }}<br>
+                <small>{{ a.student_email }}</small>
+            </td>
+
+            <td>
+                {{ a.counselor_name }}<br>
+                <small>{{ a.counselor_email }}</small>
+            </td>
+
+            <td>{{ a.start_date }}</td>
+            <td>{{ a.end_date or "—" }}</td>
+
+            <td>{{ "Yes" if a.is_primary else "No" }}</td>
+
+            <td>
+                <a class="btn btn-sm btn-warning"
+                   href="/counselor_assignments/{{ a.assignment_id }}/edit">
+                   Edit
+                </a>
+
+                <a class="btn btn-sm btn-danger"
+                   href="/counselor_assignments/{{ a.assignment_id }}/delete">
+                   Delete
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

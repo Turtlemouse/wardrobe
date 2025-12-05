@@ -1,0 +1,71 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>
+    {% if reported_symptom %} Edit Reported Symptom {% else %} Add New Reported Symptom {% endif %}
+</h2>
+
+<form method="POST"
+      action="{% if reported_symptom %}/reported_symptoms/{{ reported_symptom.reported_symptom_id }}/edit{% else %}/reported_symptoms/new{% endif %}"
+      class="mt-4">
+
+    <!-- Student Foreign Key (Searchable Dropdown) -->
+    <div class="mb-3">
+        <label class="form-label">Student *</label>
+        <select id="student_select" name="student_id" class="form-select" required>
+            <option value="">-- Select Student --</option>
+            {% for student in students %}
+            <option value="{{ student.student_id }}"
+                {% if reported_symptom and reported_symptom.student_id == student.student_id %}selected{% endif %}>
+                {{ student.name }} ({{ student.email }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Date -->
+    <div class="mb-3">
+        <label class="form-label">Date *</label>
+        <input name="date" type="date" class="form-control"
+               value="{{ reported_symptom.date if reported_symptom else '' }}" required>
+    </div>
+
+    <!-- Symptom Foreign Key (Searchable Dropdown) -->
+    <div class="mb-3">
+        <label class="form-label">Symptom *</label>
+        <select id="symptom_select" name="symptom_id" class="form-select" required>
+            <option value="">-- Select Symptom --</option>
+            {% for symptom in symptoms %}
+            <option value="{{ symptom.symptom_id }}"
+                {% if reported_symptom and reported_symptom.symptom_id == symptom.symptom_id %}selected{% endif %}>
+                {{ symptom.symptom }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Select2 Initialization -->
+    <script>
+    $(document).ready(function() {
+        $('#student_select').select2({
+            placeholder: "Select or search a student...",
+            allowClear: true,
+            width: '100%'
+        });
+        
+        $('#symptom_select').select2({
+            placeholder: "Select or search a symptom...",
+            allowClear: true,
+            width: '100%'
+        });
+    });
+    </script>
+
+    <button class="btn btn-success">
+        {% if reported_symptom %} Save Changes {% else %} Add Reported Symptom {% endif %}
+    </button>
+
+    <a href="/reported_symptoms" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% endblock %}

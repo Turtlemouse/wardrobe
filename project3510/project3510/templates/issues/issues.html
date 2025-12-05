@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>Issues</h2>
+
+<a href="/issues/new" class="btn btn-primary mb-3">Add Issue</a>
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Diagnosis</th>
+            <th>Date</th>
+            <th>Student</th>
+            <th>Provider</th>
+            <th>Counselor</th>
+            <th>Visit</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for i in issues %}
+        <tr>
+            <td>{{ i.issue_id }}</td>
+            <td>{{ i.diagnosis_name if i.diagnosis_name else 'N/A' }}</td>
+            <td>{{ i.date }}</td>
+            <td>{{ i.student_name if i.student_name else 'N/A' }}</td>
+            <td>{{ i.provider_name if i.provider_name else 'N/A' }}</td>
+            <td>{{ i.counselor_name if i.counselor_name else 'N/A' }}</td>
+            <td>{{ i.visit_id if i.visit_id else 'N/A' }}</td>
+            <td>
+                <a href="/issues/{{ i.issue_id }}/edit" class="btn btn-sm btn-warning">Edit</a>
+                <a href="/issues/{{ i.issue_id }}/delete" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

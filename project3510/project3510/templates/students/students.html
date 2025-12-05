@@ -1,0 +1,279 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>Students</h2>
+
+<a href="/students/new" class="btn btn-primary mb-3">Add Student</a>
+
+<!-- Filter Summary -->
+<div class="alert alert-info" id="filterSummary">
+    <strong>Showing:</strong> <span id="visibleCount">{{ students|length }}</span> of <span id="totalCount">{{ students|length }}</span> students
+    <span id="activeFiltersText"></span>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-bordered" id="studentsTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>SSN</th>
+                <th>Email</th>
+                <th>Date of Birth</th>
+                <th>Country of Birth</th>
+                <th>Gender</th>
+                <th>Grad Year</th>
+                <th>Insurance Provider</th>
+                <th>Race</th>
+                <th>ZIP</th>
+                <th>Street</th>
+                <th>Academic Difficulty</th>
+                <th>Dean ID</th>
+                <th>Consent Scope</th>
+                <th>Active</th>
+                <th>Actions</th>
+            </tr>
+            <tr class="filter-row">
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-0" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 0, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-1" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 1, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-2" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 2, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-3" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 3, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-4" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 4, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-5" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 5, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-6" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 6, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-7" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 7, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-8" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 8, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-9" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 9, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-10" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 10, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-11" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 11, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-12" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 12, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-13" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 13, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-14" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 14, this.value)">
+                </th>
+                <th>
+                    <input type="text" 
+                           class="form-control form-control-sm" 
+                           id="filter-15" 
+                           placeholder="Filter..."
+                           onkeyup="filterColumn('studentsTable', 15, this.value)">
+                </th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in students %}
+            <tr>
+                <td>{{ s.student_id }}</td>
+                <td>{{ s.name }}</td>
+                <td>{{ s.ssn }}</td>
+                <td>{{ s.email }}</td>
+                <td>{{ s.date_of_birth }}</td>
+                <td>{{ s.country_of_birth }}</td>
+                <td>{{ s.gender }}</td>
+                <td>{{ s.grad_year }}</td>
+                <td>{{ s.insurance_provider }}</td>
+                <td>{{ s.race }}</td>
+                <td>{{ s.zip }}</td>
+                <td>{{ s.street }}</td>
+                <td>{{ 'Yes' if s.academic_difficulty else 'No' }}</td>
+                <td>{{ s.dean_id }}</td>
+                <td>{{ s.consent_scope }}</td>
+                <td>{{ 'Yes' if s.active else 'No' }}</td>
+                <td>
+                    <a href="/students/{{ s.student_id }}/edit" class="btn btn-sm btn-warning">Edit</a>
+                    <a href="/students/{{ s.student_id }}/delete" class="btn btn-sm btn-danger">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+    .filter-row {
+        background-color: #f8f9fa;
+    }
+    
+    .filter-row th {
+        padding: 5px;
+        font-weight: normal;
+    }
+    
+    #filterSummary {
+        margin-bottom: 15px;
+    }
+    
+    .filter-badge {
+        display: inline-block;
+        margin-left: 5px;
+        padding: 3px 8px;
+        background-color: #0d6efd;
+        color: white;
+        border-radius: 4px;
+        font-size: 0.9em;
+    }
+    
+    .table-responsive {
+        overflow-x: auto;
+    }
+</style>
+
+<script>
+let activeFilters = {};
+const columnNames = ['ID', 'Name', 'SSN', 'Email', 'Date of Birth', 'Country of Birth', 
+                     'Gender', 'Grad Year', 'Insurance Provider', 'Race', 'ZIP', 'Street', 
+                     'Academic Difficulty', 'Dean ID', 'Consent Scope', 'Active'];
+
+function filterColumn(tableId, columnIndex, filterValue) {
+    filterValue = filterValue.toLowerCase().trim();
+    
+    if (filterValue) {
+        activeFilters[columnIndex] = filterValue;
+    } else {
+        delete activeFilters[columnIndex];
+    }
+    
+    filterTable(tableId);
+}
+
+function filterTable(tableId) {
+    const table = document.getElementById(tableId);
+    const rows = table.querySelectorAll('tbody tr');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        let showRow = true;
+        
+        // Check each active filter
+        for (let columnIndex in activeFilters) {
+            const cell = row.cells[columnIndex];
+            if (cell) {
+                const cellText = cell.textContent.toLowerCase().trim();
+                const filterValue = activeFilters[columnIndex];
+                
+                if (!cellText.includes(filterValue)) {
+                    showRow = false;
+                    break;
+                }
+            }
+        }
+        
+        row.style.display = showRow ? '' : 'none';
+        if (showRow) visibleCount++;
+    });
+    
+    updateFilterSummary(visibleCount, rows.length);
+}
+
+function updateFilterSummary(visibleCount, totalCount) {
+    document.getElementById('visibleCount').textContent = visibleCount;
+    document.getElementById('totalCount').textContent = totalCount;
+    
+    const activeFiltersText = document.getElementById('activeFiltersText');
+    
+    if (Object.keys(activeFilters).length > 0) {
+        let filterDescriptions = [];
+        
+        for (let columnIndex in activeFilters) {
+            const columnName = columnNames[columnIndex];
+            const filterValue = activeFilters[columnIndex];
+            filterDescriptions.push(`<span class="filter-badge">${columnName}: "${filterValue}"</span>`);
+        }
+        
+        activeFiltersText.innerHTML = ' | <strong>Active Filters:</strong> ' + filterDescriptions.join(' ');
+    } else {
+        activeFiltersText.innerHTML = '';
+    }
+}
+</script>
+
+{% endblock %}

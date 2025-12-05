@@ -1,0 +1,91 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>
+    {% if counselor %} Edit Counselor {% else %} Add New Counselor {% endif %}
+</h2>
+
+<form method="POST"
+      action="{% if counselor %}/counselors/{{ counselor.counselor_id }}/edit{% else %}/counselors/new{% endif %}"
+      class="mt-4">
+
+    <!-- Name -->
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input name="name" class="form-control"
+               value="{{ counselor.name if counselor else '' }}" required>
+    </div>
+
+    <!-- SSN -->
+    <div class="mb-3">
+        <label class="form-label">SSN</label>
+        <input name="ssn" class="form-control"
+               value="{{ counselor.ssn if counselor else '' }}" required>
+    </div>
+
+    <!-- Email -->
+    <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input name="email" type="email" class="form-control"
+               value="{{ counselor.email if counselor else '' }}" required>
+    </div>
+
+    <!-- Salary (int) -->
+    <div class="mb-3">
+        <label class="form-label">Salary</label>
+        <input name="salary" type="number" min="0" class="form-control"
+               value="{{ counselor.salary if counselor else '' }}">
+    </div>
+
+    <!-- Highest Degree -->
+    <div class="mb-3">
+        <label class="form-label">Highest Degree</label>
+        <input name="highest_degree" class="form-control"
+               value="{{ counselor.highest_degree if counselor else '' }}">
+    </div>
+
+    <!-- School -->
+    <div class="mb-3">
+        <label class="form-label">Degree School</label>
+        <input name="highest_degree_school" class="form-control"
+               value="{{ counselor.highest_degree_school if counselor else '' }}">
+    </div>
+
+    <!-- Years of experience -->
+    <div class="mb-3">
+        <label class="form-label">Years of Experience</label>
+        <input name="yrs_experience" type="number" min="0" class="form-control"
+               value="{{ counselor.yrs_experience if counselor else '' }}">
+    </div>
+
+    <!-- Years here -->
+    <div class="mb-3">
+        <label class="form-label">Years Here</label>
+        <input name="yrs_here" type="number" min="0" class="form-control"
+               value="{{ counselor.yrs_here if counselor else '' }}">
+    </div>
+
+    <!-- Specialization -->
+    <div class="mb-3">
+        <label class="form-label">Specialization</label>
+        <input name="specialization" class="form-control"
+               value="{{ counselor.specialization if counselor else '' }}">
+    </div>
+
+    <!-- Active -->
+    <div class="mb-3">
+        <label class="form-label">Active</label>
+        <select name="active" class="form-select" required>
+            <option value="1" {% if counselor and counselor.active %}selected{% endif %}>Yes</option>
+            <option value="0" {% if counselor and not counselor.active %}selected{% endif %}>No</option>
+        </select>
+    </div>
+
+    <button class="btn btn-success">
+        {% if counselor %} Save Changes {% else %} Add Counselor {% endif %}
+    </button>
+
+    <a href="/counselors" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% endblock %}

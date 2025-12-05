@@ -1,0 +1,77 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>
+    {% if dean_referral %} Edit Dean Referral {% else %} Add New Dean Referral {% endif %}
+</h2>
+
+<form method="POST"
+      action="{% if dean_referral %}/dean_referrals/{{ dean_referral.referral_id }}/edit{% else %}/dean_referrals/new{% endif %}"
+      class="mt-4">
+
+    <!-- Student Foreign Key (Searchable Dropdown) -->
+    <div class="mb-3">
+        <label class="form-label">Student *</label>
+        <select id="student_select" name="student_id" class="form-select" required>
+            <option value="">-- Select Student --</option>
+            {% for student in students %}
+            <option value="{{ student.student_id }}"
+                {% if dean_referral and dean_referral.student_id == student.student_id %}selected{% endif %}>
+                {{ student.name }} ({{ student.email }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Date -->
+    <div class="mb-3">
+        <label class="form-label">Date *</label>
+        <input name="date" type="date" class="form-control"
+               value="{{ dean_referral.date if dean_referral else '' }}" required>
+    </div>
+
+    <!-- Dean Foreign Key (Searchable Dropdown) -->
+    <div class="mb-3">
+        <label class="form-label">Dean *</label>
+        <select id="dean_select" name="dean_id" class="form-select" required>
+            <option value="">-- Select Dean --</option>
+            {% for dean in deans %}
+            <option value="{{ dean.dean_id }}"
+                {% if dean_referral and dean_referral.dean_id == dean.dean_id %}selected{% endif %}>
+                {{ dean.name }} ({{ dean.school }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Resolution Details -->
+    <div class="mb-3">
+        <label class="form-label">Resolution Details</label>
+        <textarea name="resolution_details" class="form-control" rows="4">{{ dean_referral.resolution_details if dean_referral else '' }}</textarea>
+    </div>
+
+    <!-- Select2 Initialization -->
+    <script>
+    $(document).ready(function() {
+        $('#student_select').select2({
+            placeholder: "Select or search a student...",
+            allowClear: true,
+            width: '100%'
+        });
+        
+        $('#dean_select').select2({
+            placeholder: "Select or search a dean...",
+            allowClear: true,
+            width: '100%'
+        });
+    });
+    </script>
+
+    <button class="btn btn-success">
+        {% if dean_referral %} Save Changes {% else %} Add Dean Referral {% endif %}
+    </button>
+
+    <a href="/dean_referrals" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>
+    {% if student %} Edit Student {% else %} Add New Student {% endif %}
+</h2>
+
+<form method="POST"
+      action="{% if student %}/students/{{ student.student_id }}/edit{% else %}/students/new{% endif %}"
+      class="mt-4">
+
+    <!-- Name -->
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input name="name" class="form-control"
+               value="{{ student.name if student else '' }}" required>
+    </div>
+
+    <!-- SSN -->
+    <div class="mb-3">
+        <label class="form-label">SSN</label>
+        <input name="ssn" class="form-control"
+               value="{{ student.ssn if student else '' }}" required>
+    </div>
+
+    <!-- Email -->
+    <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input name="email" class="form-control" type="email"
+               value="{{ student.email if student else '' }}" required>
+    </div>
+
+    <!-- Date of Birth -->
+    <div class="mb-3">
+        <label class="form-label">Date of Birth</label>
+        <input name="date_of_birth" type="date" class="form-control"
+               value="{{ student.date_of_birth if student else '' }}" required>
+    </div>
+
+    <!-- Country of Birth -->
+    <div class="mb-3">
+        <label class="form-label">Country of Birth</label>
+        <input name="country_of_birth" class="form-control"
+               value="{{ student.country_of_birth if student else '' }}" required>
+    </div>
+
+    <!-- Gender -->
+    <div class="mb-3">
+        <label class="form-label">Gender</label>
+        <select name="gender" class="form-select" required>
+            <option value="">-- Select Gender --</option>
+            <option value="Male"   {% if student and student.gender=='Male' %}selected{% endif %}>Male</option>
+            <option value="Female" {% if student and student.gender=='Female' %}selected{% endif %}>Female</option>
+            <option value="Other"  {% if student and student.gender=='Other' %}selected{% endif %}>Other</option>
+        </select>
+    </div>
+
+    <!-- Graduation Year -->
+    <div class="mb-3">
+        <label class="form-label">Graduation Year</label>
+        <input name="grad_year" type="number" class="form-control"
+               value="{{ student.grad_year if student else '' }}" required>
+    </div>
+
+    <!-- Insurance Provider -->
+    <div class="mb-3">
+        <label class="form-label">Insurance Provider</label>
+        <input name="insurance_provider" class="form-control"
+               value="{{ student.insurance_provider if student else '' }}">
+    </div>
+
+    <!-- Race -->
+    <div class="mb-3">
+        <label class="form-label">Race</label>
+        <input name="race" class="form-control"
+               value="{{ student.race if student else '' }}">
+    </div>
+
+    <!-- Zip -->
+    <div class="mb-3">
+        <label class="form-label">Zip Code</label>
+        <input name="zip" class="form-control"
+               value="{{ student.zip if student else '' }}">
+    </div>
+
+    <!-- Street -->
+    <div class="mb-3">
+        <label class="form-label">Street Address</label>
+        <input name="street" class="form-control"
+               value="{{ student.street if student else '' }}">
+    </div>
+
+    <!-- Academic Difficulty -->
+    <div class="mb-3">
+        <label class="form-label">Academic Difficulty (1=yes, 0=no)</label>
+        <input name="academic_difficulty" type="number" min="0" max="1" class="form-control"
+               value="{{ student.academic_difficulty if student else '' }}">
+    </div>
+
+    <!-- Dean Foreign Key (Searchable Dropdown with Select2) -->
+    <div class="mb-3">
+        <label class="form-label">Dean</label>
+
+        <select id="dean_select" name="dean_id" class="form-select" required>
+            <option value="">-- Select Dean --</option>
+
+            {% for dean in deans %}
+            <option value="{{ dean.dean_id }}"
+                {% if student and student.dean_id == dean.dean_id %}selected{% endif %}>
+                {{ dean.name }} ({{ dean.school }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Select2 Initialization -->
+    <script>
+    $(document).ready(function() {
+        $('#dean_select').select2({
+            placeholder: "Select or search a dean...",
+            allowClear: true,
+            width: '100%'
+        });
+    });
+    </script>
+
+    <!-- Consent Scope -->
+    <div class="mb-3">
+        <label class="form-label">Consent Scope</label>
+        <input name="consent_scope" class="form-control"
+               value="{{ student.consent_scope if student else '' }}">
+    </div>
+
+    <button class="btn btn-success">
+        {% if student %} Save Changes {% else %} Add Student {% endif %}
+    </button>
+
+    <a href="/students" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% endblock %}

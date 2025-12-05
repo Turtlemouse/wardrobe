@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>Job Referrals</h2>
+
+<a href="/job_referrals/new" class="btn btn-primary mb-3">Add Job Referral</a>
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Student</th>
+            <th>Date</th>
+            <th>Employment Event</th>
+            <th>Resolution Details</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for jr in job_referrals %}
+        <tr>
+            <td>{{ jr.referral_id }}</td>
+            <td>{{ jr.student_name if jr.student_name else 'N/A' }}</td>
+            <td>{{ jr.date }}</td>
+            <td>{{ jr.event_name if jr.event_name else 'N/A' }}</td>
+            <td>{{ jr.resolution_details[:50] if jr.resolution_details else 'N/A' }}{% if jr.resolution_details and jr.resolution_details|length > 50 %}...{% endif %}</td>
+            <td>
+                <a href="/job_referrals/{{ jr.referral_id }}/edit" class="btn btn-sm btn-warning">Edit</a>
+                <a href="/job_referrals/{{ jr.referral_id }}/delete" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

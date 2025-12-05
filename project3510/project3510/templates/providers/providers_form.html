@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>
+    {% if provider %} Edit Healthcare Provider {% else %} Add New Healthcare Provider {% endif %}
+</h2>
+
+<form method="POST"
+      action="{% if provider %}/providers/{{ provider.provider_id }}/edit{% else %}/providers/new{% endif %}"
+      class="mt-4">
+
+    <!-- Name -->
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input name="name" class="form-control"
+               value="{{ provider.name if provider else '' }}" required>
+    </div>
+
+    <!-- Email -->
+    <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input name="email" class="form-control" type="email"
+               value="{{ provider.email if provider else '' }}" required>
+    </div>
+
+    <!-- Address -->
+    <div class="mb-3">
+        <label class="form-label">Address</label>
+        <input name="address" class="form-control"
+               value="{{ provider.address if provider else '' }}" required>
+    </div>
+
+    <!-- Specialization -->
+    <div class="mb-3">
+        <label class="form-label">Specialization</label>
+        <input name="specialization" class="form-control"
+               value="{{ provider.specialization if provider else '' }}">
+    </div>
+
+    <!-- Active -->
+    <div class="mb-3">
+        <label class="form-label">Active</label>
+        <select name="active" class="form-select" required>
+            <option value="1" {% if provider and provider.active %}selected{% endif %}>Yes</option>
+            <option value="0" {% if provider and not provider.active %}selected{% endif %}>No</option>
+        </select>
+    </div>
+
+    <button class="btn btn-success">
+        {% if provider %} Save Changes {% else %} Add Provider {% endif %}
+    </button>
+
+    <a href="/providers" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% endblock %}

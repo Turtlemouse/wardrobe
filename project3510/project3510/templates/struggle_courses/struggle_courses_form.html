@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>
+    {% if struggle_course %} Edit Struggle Course {% else %} Add New Struggle Course {% endif %}
+</h2>
+
+<form method="POST"
+      action="{% if struggle_course %}/struggle_courses/{{ struggle_course.struggle_id }}/edit{% else %}/struggle_courses/new{% endif %}"
+      class="mt-4">
+
+    <!-- Student Foreign Key (Searchable Dropdown) -->
+    <div class="mb-3">
+        <label class="form-label">Student *</label>
+        <select id="student_select" name="student_id" class="form-select" required>
+            <option value="">-- Select Student --</option>
+            {% for student in students %}
+            <option value="{{ student.student_id }}"
+                {% if struggle_course and struggle_course.student_id == student.student_id %}selected{% endif %}>
+                {{ student.name }} ({{ student.email }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Course Number -->
+    <div class="mb-3">
+        <label class="form-label">Course Number *</label>
+        <input name="course_number" class="form-control"
+               value="{{ struggle_course.course_number if struggle_course else '' }}"
+               placeholder="e.g., COSC-3510, MATH-140, ECON-101" required>
+    </div>
+
+    <!-- Select2 Initialization -->
+    <script>
+    $(document).ready(function() {
+        $('#student_select').select2({
+            placeholder: "Select or search a student...",
+            allowClear: true,
+            width: '100%'
+        });
+    });
+    </script>
+
+    <button class="btn btn-success">
+        {% if struggle_course %} Save Changes {% else %} Add Struggle Course {% endif %}
+    </button>
+
+    <a href="/struggle_courses" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% endblock %}

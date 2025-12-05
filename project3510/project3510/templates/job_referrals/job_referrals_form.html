@@ -1,0 +1,77 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h2>
+    {% if job_referral %} Edit Job Referral {% else %} Add New Job Referral {% endif %}
+</h2>
+
+<form method="POST"
+      action="{% if job_referral %}/job_referrals/{{ job_referral.referral_id }}/edit{% else %}/job_referrals/new{% endif %}"
+      class="mt-4">
+
+    <!-- Student Foreign Key (Searchable Dropdown) -->
+    <div class="mb-3">
+        <label class="form-label">Student *</label>
+        <select id="student_select" name="student_id" class="form-select" required>
+            <option value="">-- Select Student --</option>
+            {% for student in students %}
+            <option value="{{ student.student_id }}"
+                {% if job_referral and job_referral.student_id == student.student_id %}selected{% endif %}>
+                {{ student.name }} ({{ student.email }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Date -->
+    <div class="mb-3">
+        <label class="form-label">Date *</label>
+        <input name="date" type="date" class="form-control"
+               value="{{ job_referral.date if job_referral else '' }}" required>
+    </div>
+
+    <!-- Employment Event Foreign Key (Searchable Dropdown) -->
+    <div class="mb-3">
+        <label class="form-label">Employment Event *</label>
+        <select id="event_select" name="event_id" class="form-select" required>
+            <option value="">-- Select Employment Event --</option>
+            {% for event in employment_events %}
+            <option value="{{ event.event_id }}"
+                {% if job_referral and job_referral.event_id == event.event_id %}selected{% endif %}>
+                {{ event.name }} - {{ event.date }} ({{ event.type if event.type else 'Event' }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Resolution Details -->
+    <div class="mb-3">
+        <label class="form-label">Resolution Details</label>
+        <textarea name="resolution_details" class="form-control" rows="4">{{ job_referral.resolution_details if job_referral else '' }}</textarea>
+    </div>
+
+    <!-- Select2 Initialization -->
+    <script>
+    $(document).ready(function() {
+        $('#student_select').select2({
+            placeholder: "Select or search a student...",
+            allowClear: true,
+            width: '100%'
+        });
+        
+        $('#event_select').select2({
+            placeholder: "Select or search an employment event...",
+            allowClear: true,
+            width: '100%'
+        });
+    });
+    </script>
+
+    <button class="btn btn-success">
+        {% if job_referral %} Save Changes {% else %} Add Job Referral {% endif %}
+    </button>
+
+    <a href="/job_referrals" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% endblock %}

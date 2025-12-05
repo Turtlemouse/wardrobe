@@ -1,0 +1,417 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<style>
+    .query-container {
+        max-width: 600px;
+        margin: 40px auto;
+        padding: 30px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .query-container h1 {
+        color: #333;
+        margin-bottom: 30px;
+        text-align: center;
+        font-size: 28px;
+    }
+    
+    .form-group {
+        margin-bottom: 25px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #555;
+        font-weight: 600;
+        font-size: 14px;
+    }
+    
+    .optional-label {
+        color: #999;
+        font-weight: normal;
+        font-size: 12px;
+        margin-left: 5px;
+    }
+    
+    .form-group select,
+    .form-group input {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .form-group select:focus,
+    .form-group input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    #params-container {
+        margin-top: 20px;
+    }
+    
+    .param-input {
+        margin-bottom: 15px;
+    }
+    
+    .execute-btn {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        margin-top: 10px;
+    }
+    
+    .execute-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .execute-btn:active:not(:disabled) {
+        transform: translateY(0);
+    }
+    
+    .execute-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    #result {
+        margin-top: 25px;
+        padding: 20px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        text-align: center;
+        display: none;
+        overflow-x: auto;
+    }
+    
+    #result.success {
+        background: #d4edda;
+        color: #155724;
+        border: 2px solid #c3e6cb;
+        display: block;
+        text-align: left;
+    }
+    
+    #result.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 2px solid #f5c6cb;
+        display: block;
+    }
+    
+    .fade-in {
+        animation: fadeIn 0.3s ease-in;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Loading indicator */
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+</style>
+
+<div class="query-container">
+    <h1>Query Selector</h1>
+    
+    <div class="form-group">
+        <label for="function-select">Select a Query:</label>
+        <select id="function-select">
+            <option value="">-- Choose a function --</option>
+            {% for func_name, func_info in functions.items() %}
+            <option value="{{ func_name }}">{{ func_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div id="params-container"></div>
+    
+    <button class="execute-btn" id="execute-btn" disabled>Execute Function</button>
+    
+    <div id="result"></div>
+</div>
+
+<script>
+    const functionSelect = document.getElementById('function-select');
+    const paramsContainer = document.getElementById('params-container');
+    const executeBtn = document.getElementById('execute-btn');
+    const resultDiv = document.getElementById('result');
+    
+    let currentParams = [];
+    let paramValues = {};
+
+    functionSelect.addEventListener('change', async function() {
+        const functionName = this.value;
+        paramsContainer.innerHTML = '';
+        resultDiv.style.display = 'none';
+        currentParams = [];
+        paramValues = {};
+        
+        if (!functionName) {
+            executeBtn.disabled = true;
+            return;
+        }
+
+        try {
+            const response = await fetch(`/get_params/${functionName}`);
+            const params = await response.json();
+            
+            console.log('Loaded params:', params);
+            currentParams = params;
+            
+            if (params.length > 0) {
+                for (const param of params) {
+                    await createParamInput(param);
+                }
+                executeBtn.disabled = false;
+            } else {
+                executeBtn.disabled = false;
+            }
+        } catch (error) {
+            console.error('Error loading parameters:', error);
+            showResult('Error loading parameters: ' + error.message, 'error');
+        }
+    });
+
+    async function createParamInput(param) {
+        const paramDiv = document.createElement('div');
+        paramDiv.className = 'form-group param-input fade-in';
+        
+        const label = document.createElement('label');
+        label.textContent = param.label + ':';
+        
+        // Add optional indicator
+        const optionalSpan = document.createElement('span');
+        optionalSpan.className = 'optional-label';
+        optionalSpan.textContent = '(optional)';
+        label.appendChild(optionalSpan);
+        
+        label.setAttribute('for', param.name);
+        paramDiv.appendChild(label);
+
+        if (param.type === 'table') {
+            // Create dropdown for table names
+            const select = await createTableDropdown(param.name);
+            paramDiv.appendChild(select);
+        } else if (param.type === 'column') {
+            // Create dropdown for column names (depends on table selection)
+            const select = createColumnDropdown(param.name, param.depends_on);
+            paramDiv.appendChild(select);
+        } else if (param.type === 'value_from_column') {
+            // Create dropdown for values from a specific column
+            const select = await createValueDropdown(param.name, param.source_table, param.source_column);
+            paramDiv.appendChild(select);
+        } else {
+            // Create regular input for other types
+            const input = document.createElement('input');
+            input.type = param.type === 'str' ? 'text' : 'number';
+            input.id = param.name;
+            input.name = param.name;
+            input.placeholder = `Enter ${param.label.toLowerCase()} (optional)`;
+            input.required = false; // Make it optional
+            
+            if (param.type === 'float') {
+                input.step = '0.01';
+            }
+            
+            paramDiv.appendChild(input);
+        }
+        
+        paramsContainer.appendChild(paramDiv);
+    }
+
+    async function createTableDropdown(paramName) {
+        const select = document.createElement('select');
+        select.id = paramName;
+        select.name = paramName;
+        select.required = false; // Make it optional
+        
+        // Add loading option
+        select.innerHTML = '<option value="">Loading tables...</option>';
+        
+        try {
+            const response = await fetch('/get_tables');
+            const tables = await response.json();
+            
+            select.innerHTML = '<option value="">(Leave empty for null)</option>';
+            tables.forEach(table => {
+                const option = document.createElement('option');
+                option.value = table;
+                option.textContent = table;
+                select.appendChild(option);
+            });
+            
+            // When table is selected, update dependent column dropdowns
+            select.addEventListener('change', function() {
+                updateDependentColumns(paramName, this.value);
+            });
+            
+        } catch (error) {
+            console.error('Error loading tables:', error);
+            select.innerHTML = '<option value="">Error loading tables</option>';
+        }
+        
+        return select;
+    }
+
+    function createColumnDropdown(paramName, dependsOn) {
+        const select = document.createElement('select');
+        select.id = paramName;
+        select.name = paramName;
+        select.required = false; // Make it optional
+        select.disabled = true;
+        select.innerHTML = '<option value="">First select a table</option>';
+        
+        return select;
+    }
+
+    async function updateDependentColumns(tableParamName, tableName) {
+        if (!tableName) return;
+        
+        // Find all column dropdowns that depend on this table
+        const columnDropdowns = paramsContainer.querySelectorAll('select');
+        
+        for (const dropdown of columnDropdowns) {
+            const param = currentParams.find(p => p.name === dropdown.name);
+            if (param && param.type === 'column' && param.depends_on === tableParamName) {
+                dropdown.disabled = true;
+                dropdown.innerHTML = '<option value="">Loading columns...</option>';
+                
+                try {
+                    const response = await fetch(`/get_columns/${tableName}`);
+                    const columns = await response.json();
+                    
+                    dropdown.innerHTML = '<option value="">(Leave empty for null)</option>';
+                    columns.forEach(column => {
+                        const option = document.createElement('option');
+                        option.value = column;
+                        option.textContent = column;
+                        dropdown.appendChild(option);
+                    });
+                    dropdown.disabled = false;
+                    
+                } catch (error) {
+                    console.error('Error loading columns:', error);
+                    dropdown.innerHTML = '<option value="">Error loading columns</option>';
+                }
+            }
+        }
+    }
+
+    async function createValueDropdown(paramName, sourceTable, sourceColumn) {
+        const select = document.createElement('select');
+        select.id = paramName;
+        select.name = paramName;
+        select.required = false; // Make it optional
+        
+        select.innerHTML = '<option value="">Loading values...</option>';
+        
+        try {
+            const response = await fetch(`/get_column_values/${sourceTable}/${sourceColumn}`);
+            const values = await response.json();
+            
+            select.innerHTML = '<option value="">(Leave empty for null)</option>';
+            values.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                select.appendChild(option);
+            });
+            
+        } catch (error) {
+            console.error('Error loading values:', error);
+            select.innerHTML = '<option value="">Error loading values</option>';
+        }
+        
+        return select;
+    }
+
+    executeBtn.addEventListener('click', async function() {
+        const functionName = functionSelect.value;
+        if (!functionName) return;
+
+        const params = {};
+        const inputs = paramsContainer.querySelectorAll('input, select');
+        
+        // Collect all parameters, including empty ones (they'll be sent as empty strings)
+        inputs.forEach(input => {
+            // Only include if there's a value (allow empty string for optional params)
+            if (input.value !== null && input.value !== undefined) {
+                params[input.name] = input.value;
+            }
+        });
+
+        // Show loading state
+        executeBtn.disabled = true;
+        executeBtn.textContent = 'Executing...';
+
+        try {
+            const response = await fetch('/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    function_name: functionName,
+                    params: params
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Check if result contains HTML (tables)
+                if (typeof data.result === 'string' && data.result.includes('<table')) {
+                    showResult(data.result, 'success');
+                } else {
+                    showResult(`Result: ${data.result}`, 'success');
+                }
+            } else {
+                showResult(`Error: ${data.error}`, 'error');
+            }
+        } catch (error) {
+            showResult(`Error: ${error.message}`, 'error');
+        } finally {
+            // Reset button state
+            executeBtn.disabled = false;
+            executeBtn.textContent = 'Execute Function';
+        }
+    });
+
+    function showResult(message, type) {
+        resultDiv.innerHTML = message;
+        resultDiv.className = type + ' fade-in';
+        resultDiv.style.display = 'block';
+    }
+</script>
+
+{% endblock %}
