@@ -205,3 +205,33 @@ table tr:hover td {
 -------------------------------------------------- */
 .mt-20 { margin-top: 20px; }
 .mb-20 { margin-bottom: 20px; }
+
+/* --------------------------------------------------
+   ALERT / FLASH MESSAGE BOXES
+-------------------------------------------------- */
+
+.alert-box {
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    font-size: 15px;
+    box-shadow: 0px 2px 6px rgba(0,0,0,0.08);
+}
+
+.alert-error {
+    background: #ffe5e5;
+    border: 1px solid #ffb3b3;
+    color: #b30000;
+}
+
+.alert-success {
+    background: #e8f9e8;
+    border: 1px solid #b6e7b6;
+    color: #2d7a2d;
+}
+
+.alert-info {
+    background: #eef4ff;
+    border: 1px solid #c6d8ff;
+    color: #2a4ea3;
+}
