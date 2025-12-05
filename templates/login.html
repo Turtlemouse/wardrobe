@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="center-box">
+        <h2>Login</h2>
+
+        <form method="POST">
+            <label>Email</label>
+            <input type="email" name="email" required>
+
+            <label>Password</label>
+            <input type="password" name="password" required>
+
+            <button type="submit" class="btn">Login</button>
+        </form>
+
+        <div class="switch" style="text-align:center; margin-top:15px;">
+            Don't have an account?
+            <a href="/signup">Sign up</a>
+        </div>
+    </div>
+</body>
+</html>
