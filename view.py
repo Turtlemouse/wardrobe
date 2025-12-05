@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, flash
 from supabase_client import supabase
 import os
 
@@ -26,6 +26,11 @@ def signup():
         password = request.form["password"]
         password_hash = generate_password_hash(password)
 
+        result = supabase.table("users").select("*").eq("email", email).execute()
+        if result.data:
+            flash("There is already an account associated with this email!")
+            return render_template("signup.html")
+
         result = supabase.table("users").insert({
             "email": email,
             "password_hash": password_hash
@@ -33,7 +38,6 @@ def signup():
 
         user_id = result.data[0]["id"]
 
-        # No JSON wardrobe, SQL tables handle it now
         return redirect("/login")
 
     return render_template("signup.html")
@@ -49,12 +53,14 @@ def login():
 
         result = supabase.table("users").select("*").eq("email", email).execute()
         if not result.data:
-            return "User not found"
+            flash("User not found!")
+            return render_template("login.html")
 
         user = result.data[0]
 
         if not check_password_hash(user["password_hash"], password):
-            return "Incorrect password"
+            flash("Incorrect password!")
+            return render_template("login.html")
 
         session["user_id"] = user["id"]
         return redirect("/wardrobe")
