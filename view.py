@@ -37,7 +37,7 @@ def signup():
         # Check if email already exists
         # ---------------------------
         existing = supabase.table("users") \
-            .select("id") \
+            .select("user_id") \
             .eq("email", email) \
             .execute()
 
@@ -63,7 +63,7 @@ def signup():
         # ---------------------------
         # Start session
         # ---------------------------
-        session["user_id"] = user["id"]
+        session["user_id"] = user["user_id"]
         session["email"] = email
         session["first_name"] = first
         session["last_name"] = last
@@ -91,7 +91,7 @@ def login():
             flash("Incorrect password!")
             return render_template("login.html")
 
-        session["user_id"] = user["id"]
+        session["user_id"] = user["user_id"]
         return redirect("/wardrobe")
 
     return render_template("login.html")
