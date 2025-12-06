@@ -1,62 +1,46 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>My Wardrobe</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
+{% extends "layout.html" %}
 
-<body>
+{% block title %}Dashboard - My Wardrobe{% endblock %}
 
-    <!-- NAV BAR -->
-    <nav>
-        <div>
-            <a href="/wardrobe">Dashboard</a>
-            <a href="/items">Items</a>
-            <a href="/attributes">Attributes</a>
-            <a href="/outfits">Outfit Generator</a>
-        </div>
-        <div>
-            <a href="/logout" class="btn-red" style="padding: 8px 12px;">Logout</a>
-        </div>
-    </nav>
-
-    <div class="container">
-
+{% block content %}
+<div class="container">
+    <div class="page-header">
         <h1>Welcome to Your Wardrobe</h1>
-        <p style="margin-bottom: 25px; color:#555;">
-            Logged in as <strong>{{ user_email }}</strong>
+        <p class="subtitle">
+            Logged in as <strong>{{ session.get('email', 'User') }}</strong>
         </p>
-
-        <!-- DASHBOARD CARDS -->
-        <div class="flex flex-wrap" style="gap: 25px;">
-
-            <!-- ITEMS -->
-            <a href="/items" style="text-decoration:none; color: inherit;">
-                <div class="card">
-                    <h3>Items</h3>
-                    <p>Add, edit, organize your clothing items.</p>
-                </div>
-            </a>
-
-            <!-- ATTRIBUTES -->
-            <a href="/attributes" style="text-decoration:none; color: inherit;">
-                <div class="card">
-                    <h3>Attributes</h3>
-                    <p>Manage custom properties your clothes can have.</p>
-                </div>
-            </a>
-
-            <!-- OUTFIT GENERATOR -->
-            <a href="/outfits" style="text-decoration:none; color: inherit;">
-                <div class="card">
-                    <h3>Outfit Generator</h3>
-                    <p>Generate suggested outfits based on your data.</p>
-                </div>
-            </a>
-
-        </div>
-
     </div>
 
-</body>
-</html>
+    <!-- DASHBOARD CARDS -->
+    <div class="flex flex-wrap" style="gap: 25px;">
+
+        <!-- ITEMS -->
+        <a href="/items" style="text-decoration:none; color: inherit;">
+            <div class="card">
+                <h3>Items</h3>
+                <p style="color: #666; margin-top: 8px;">{{ items|length }} items in your wardrobe</p>
+                <p style="color: #999; font-size: 14px; margin-top: 5px;">Add, edit, and organize your clothing items</p>
+            </div>
+        </a>
+
+        <!-- ATTRIBUTES -->
+        <a href="/attributes" style="text-decoration:none; color: inherit;">
+            <div class="card">
+                <h3>Attributes</h3>
+                <p style="color: #666; margin-top: 8px;">{{ attributes|length }} custom attributes</p>
+                <p style="color: #999; font-size: 14px; margin-top: 5px;">Manage properties for your clothes</p>
+            </div>
+        </a>
+
+        <!-- RULES -->
+        <a href="/rules" style="text-decoration:none; color: inherit;">
+            <div class="card">
+                <h3>Rules</h3>
+                <p style="color: #666; margin-top: 8px;">{{ rules|length }} rules configured</p>
+                <p style="color: #999; font-size: 14px; margin-top: 5px;">Set up matching and outfit rules</p>
+            </div>
+        </a>
+
+    </div>
+</div>
+{% endblock %}

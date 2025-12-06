@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My Wardrobe{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- NAV BAR -->
+    <nav>
+        <div>
+            <a href="/wardrobe" {% if request.path == '/wardrobe' %}style="color: #5865f2; font-weight: 600;"{% endif %}>Dashboard</a>
+            <a href="/items" {% if request.path == '/items' %}style="color: #5865f2; font-weight: 600;"{% endif %}>Items</a>
+            <a href="/attributes" {% if request.path == '/attributes' %}style="color: #5865f2; font-weight: 600;"{% endif %}>Attributes</a>
+            <a href="/rules" {% if request.path == '/rules' %}style="color: #5865f2; font-weight: 600;"{% endif %}>Rules</a>
+        </div>
+        <div>
+            <a href="/logout" class="btn-red" style="padding: 8px 12px;">Logout</a>
+        </div>
+    </nav>
+
+    <!-- FLASH MESSAGES -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="container">
+                {% for message in messages %}
+                    <div class="alert-box alert-error">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- MAIN CONTENT -->
+    {% block content %}{% endblock %}
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

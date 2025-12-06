@@ -1,170 +1,157 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Wardrobe Items</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <nav>
-        <div>
-            <a href="/wardrobe">Dashboard</a>
-            <a href="/items" style="color: #5865f2; font-weight: 600;">Items</a>
-            <a href="/attributes">Attributes</a>
-            <a href="/rules">Rules</a>
-        </div>
-        <a href="/logout">Logout</a>
-    </nav>
+{% extends "layout.html" %}
 
-    <div class="container">
-        <div class="page-header">
-            <h1>My Wardrobe</h1>
-            <p class="subtitle">Organize your clothing items by category</p>
-        </div>
+{% block title %}Items - My Wardrobe{% endblock %}
 
-        <div class="slots-container">
-            {% if not slots %}
-            <div class="empty-state">
-                <div class="empty-state-icon">👔</div>
-                <p>No wardrobe slots yet. Add your first slot to get started!</p>
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>My Wardrobe</h1>
+        <p class="subtitle">Organize your clothing items by category</p>
+    </div>
+
+    <div class="slots-container">
+        {% if not slots %}
+        <div class="empty-state">
+            <div class="empty-state-icon">👔</div>
+            <p>No wardrobe slots yet. Add your first slot to get started!</p>
+        </div>
+        {% endif %}
+
+        {% for slot in slots %}
+            {% if not loop.first %}
+            <div class="slot-separator">
+                <button class="add-slot-btn" data-index="{{ loop.index }}" onclick="addSlotBetween(this.dataset.index)">
+                    + Add Slot
+                </button>
             </div>
             {% endif %}
 
-            {% for slot in slots %}
-                {% if not loop.first %}
-                <div class="slot-separator">
-                    <button class="add-slot-btn" data-index="{{ loop.index }}" onclick="addSlotBetween(this.dataset.index)">
-                        + Add Slot
-                    </button>
+            <div class="slot-table-wrapper">
+                <div class="slot-header">
+                    <h2 class="slot-title">{{ slot.slot_name }}</h2>
+                    <div class="slot-actions">
+                        <button class="btn-small" data-slot-id="{{ slot.slot_id }}" onclick="editSlot(this.dataset.slotId)">Edit Slot</button>
+                        <button class="btn-small" data-slot-id="{{ slot.slot_id }}" onclick="deleteSlot(this.dataset.slotId)">Delete</button>
+                    </div>
+                </div>
+
+                {% set slot_attributes = slot_attrs[slot.slot_id] | default([]) %}
+                
+                {% if slot_attributes or slot_items[slot.slot_id] %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>
+                                Item Name
+                                <div class="column-separator">
+                                    <button class="add-attribute-btn" data-slot-id="{{ slot.slot_id }}" data-order="0" onclick="addAttribute(this.dataset.slotId, this.dataset.order)" title="Add attribute">+</button>
+                                </div>
+                            </th>
+                            {% for attr in slot_attributes %}
+                            <th>
+                                {{ attr.attr_name }}
+                                <div class="column-separator">
+                                    <button class="add-attribute-btn" data-slot-id="{{ slot.slot_id }}" data-order="{{ loop.index }}" onclick="addAttribute(this.dataset.slotId, this.dataset.order)" title="Add attribute">+</button>
+                                </div>
+                            </th>
+                            {% endfor %}
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set items = slot_items[slot.slot_id] | default([]) %}
+                        {% if items %}
+                            {% for item in items %}
+                            <tr>
+                                <td class="item-name">{{ item.item_name }}</td>
+                                {% for attr in slot_attributes %}
+                                    {% set attr_value = item.attr_values.get(attr.attr_id, '') %}
+                                    <td>{{ attr_value }}</td>
+                                {% endfor %}
+                                <td>
+                                    <div class="item-actions">
+                                        <button class="btn-icon" data-item-id="{{ item.item_id }}" data-slot-id="{{ slot.slot_id }}" onclick="editItem(this.dataset.itemId, this.dataset.slotId)">Edit</button>
+                                        <button class="btn-icon delete" data-item-id="{{ item.item_id }}" onclick="deleteItem(this.dataset.itemId)">Delete</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="{{ slot_attributes|length + 2 }}" style="text-align: center; color: #999; padding: 30px;">
+                                    No items in this slot yet
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <p>No attributes defined for this slot yet</p>
                 </div>
                 {% endif %}
 
-                <div class="slot-table-wrapper">
-                    <div class="slot-header">
-                        <h2 class="slot-title">{{ slot.slot_name }}</h2>
-                        <div class="slot-actions">
-                            <button class="btn-small" data-slot-id="{{ slot.slot_id }}" onclick="editSlot(this.dataset.slotId)">Edit Slot</button>
-                            <button class="btn-small" data-slot-id="{{ slot.slot_id }}" onclick="deleteSlot(this.dataset.slotId)">Delete</button>
-                        </div>
-                    </div>
-
-                    {% set slot_attributes = slot_attrs[slot.slot_id] | default([]) %}
-                    
-                    {% if slot_attributes or slot_items[slot.slot_id] %}
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>
-                                    Item Name
-                                    <div class="column-separator">
-                                        <button class="add-attribute-btn" data-slot-id="{{ slot.slot_id }}" data-order="0" onclick="addAttribute(this.dataset.slotId, this.dataset.order)" title="Add attribute">+</button>
-                                    </div>
-                                </th>
-                                {% for attr in slot_attributes %}
-                                <th>
-                                    {{ attr.attr_name }}
-                                    <div class="column-separator">
-                                        <button class="add-attribute-btn" data-slot-id="{{ slot.slot_id }}" data-order="{{ loop.index }}" onclick="addAttribute(this.dataset.slotId, this.dataset.order)" title="Add attribute">+</button>
-                                    </div>
-                                </th>
-                                {% endfor %}
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% set items = slot_items[slot.slot_id] | default([]) %}
-                            {% if items %}
-                                {% for item in items %}
-                                <tr>
-                                    <td class="item-name">{{ item.item_name }}</td>
-                                    {% for attr in slot_attributes %}
-                                        {% set attr_value = item.attr_values.get(attr.attr_id, '') %}
-                                        <td>{{ attr_value }}</td>
-                                    {% endfor %}
-                                    <td>
-                                        <div class="item-actions">
-                                            <button class="btn-icon" data-item-id="{{ item.item_id }}" data-slot-id="{{ slot.slot_id }}" onclick="editItem(this.dataset.itemId, this.dataset.slotId)">Edit</button>
-                                            <button class="btn-icon delete" data-item-id="{{ item.item_id }}" onclick="deleteItem(this.dataset.itemId)">Delete</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td colspan="{{ slot_attributes|length + 2 }}" style="text-align: center; color: #999; padding: 30px;">
-                                        No items in this slot yet
-                                    </td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                    {% else %}
-                    <div class="empty-state">
-                        <p>No attributes defined for this slot yet</p>
-                    </div>
-                    {% endif %}
-
-                    <button class="add-item-btn" data-slot-id="{{ slot.slot_id }}" onclick="addItem(this.dataset.slotId)">+ Add Item</button>
-                </div>
-            {% endfor %}
-
-            {% if slots %}
-            <div class="slot-separator" style="opacity: 1; margin-top: 10px;">
-                <button class="add-slot-btn" data-index="{{ slots|length }}" onclick="addSlotBetween(this.dataset.index)">
-                    + Add Slot at End
-                </button>
+                <button class="add-item-btn" data-slot-id="{{ slot.slot_id }}" onclick="addItem(this.dataset.slotId)">+ Add Item</button>
             </div>
-            {% else %}
-            <div style="text-align: center;">
-                <button class="add-slot-btn" onclick="addSlotBetween(0)">
-                    + Add Your First Slot
-                </button>
-            </div>
-            {% endif %}
+        {% endfor %}
+
+        {% if slots %}
+        <div class="slot-separator" style="opacity: 1; margin-top: 10px;">
+            <button class="add-slot-btn" data-index="{{ slots|length }}" onclick="addSlotBetween(this.dataset.index)">
+                + Add Slot at End
+            </button>
         </div>
+        {% else %}
+        <div style="text-align: center;">
+            <button class="add-slot-btn" onclick="addSlotBetween(0)">
+                + Add Your First Slot
+            </button>
+        </div>
+        {% endif %}
     </div>
+</div>
+{% endblock %}
 
-    <script>
-        function addSlotBetween(index) {
-            window.location.href = '/slots/new?order_index=' + index;
-        }
+{% block extra_js %}
+<script>
+    function addSlotBetween(index) {
+        window.location.href = '/slots/new?order_index=' + index;
+    }
 
-        function editSlot(slotId) {
-            window.location.href = '/slots/edit/' + slotId;
-        }
+    function editSlot(slotId) {
+        window.location.href = '/slots/edit/' + slotId;
+    }
 
-        function deleteSlot(slotId) {
-            if (confirm('Are you sure you want to delete this slot? All items in this slot will also be deleted.')) {
-                fetch('/slots/delete/' + slotId, {
-                    method: 'POST'
-                }).then(function() {
-                    window.location.reload();
-                });
-            }
+    function deleteSlot(slotId) {
+        if (confirm('Are you sure you want to delete this slot? All items in this slot will also be deleted.')) {
+            fetch('/slots/delete/' + slotId, {
+                method: 'POST'
+            }).then(function() {
+                window.location.reload();
+            });
         }
+    }
 
-        function addAttribute(slotId, orderIndex) {
-            window.location.href = '/attributes/new?slot_id=' + slotId + '&order_index=' + orderIndex;
-        }
+    function addAttribute(slotId, orderIndex) {
+        window.location.href = '/attributes/new?slot_id=' + slotId + '&order_index=' + orderIndex;
+    }
 
-        function addItem(slotId) {
-            window.location.href = '/items/new?slot_id=' + slotId;
-        }
+    function addItem(slotId) {
+        window.location.href = '/items/new?slot_id=' + slotId;
+    }
 
-        function editItem(itemId, slotId) {
-            window.location.href = '/items/edit/' + itemId + '?slot_id=' + slotId;
-        }
+    function editItem(itemId, slotId) {
+        window.location.href = '/items/edit/' + itemId + '?slot_id=' + slotId;
+    }
 
-        function deleteItem(itemId) {
-            if (confirm('Are you sure you want to delete this item?')) {
-                fetch('/items/delete/' + itemId, {
-                    method: 'POST'
-                }).then(function() {
-                    window.location.reload();
-                });
-            }
+    function deleteItem(itemId) {
+        if (confirm('Are you sure you want to delete this item?')) {
+            fetch('/items/delete/' + itemId, {
+                method: 'POST'
+            }).then(function() {
+                window.location.reload();
+            });
         }
-    </script>
-</body>
-</html>
+    }
+</script>
+{% endblock %}

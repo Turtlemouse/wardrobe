@@ -37,7 +37,7 @@ def signup():
         # Check if email already exists
         # ---------------------------
         existing = supabase.table("users") \
-            .select("user_id") \
+            .select("id") \
             .eq("email", email) \
             .execute()
 
@@ -63,7 +63,7 @@ def signup():
         # ---------------------------
         # Start session
         # ---------------------------
-        session["user_id"] = user["user_id"]
+        session["user_id"] = user["id"]
         session["email"] = email
         session["first_name"] = first
         session["last_name"] = last
@@ -91,7 +91,7 @@ def login():
             flash("Incorrect password!")
             return render_template("login.html")
 
-        session["user_id"] = user["user_id"]
+        session["user_id"] = user["id"]
         return redirect("/wardrobe")
 
     return render_template("login.html")
@@ -114,16 +114,26 @@ def wardrobe_home():
 
     user_id = session["user_id"]
 
-    items = supabase.table("items").select("*").eq("user_id", user_id).execute().data
-    attributes = supabase.table("item_attributes").select("*").eq("user_id", user_id).execute().data
-    rules = supabase.table("rules").select("*").eq("user_id", user_id).execute().data
+    try:
+        items = supabase.table("Items").select("*").eq("user_id", user_id).execute().data
+        attributes = supabase.table("Attributes").select("*").eq("user_id", user_id).execute().data
+        rules = supabase.table("Rules").select("*").eq("user_id", user_id).execute().data
 
-    return render_template(
-        "wardrobe.html",
-        items=items,
-        attributes=attributes,
-        rules=rules
-    )
+        return render_template(
+            "wardrobe.html",
+            items=items,
+            attributes=attributes,
+            rules=rules
+        )
+    except Exception as e:
+        print(f"Error in wardrobe_home: {str(e)}")
+        flash(f"Error loading wardrobe: {str(e)}")
+        return render_template(
+            "wardrobe.html",
+            items=[],
+            attributes=[],
+            rules=[]
+        )
 
 
 # -------------------------------------------------------
@@ -222,55 +232,64 @@ def list_items():
     
     user_id = session["user_id"]
     
-    # Fetch all slots for this user, ordered by order_index
-    slots = supabase.table("Slots").select("*").eq("user_id", user_id).order("order_index").execute().data
-    
-    # Fetch all attributes
-    all_attributes = supabase.table("Attributes").select("*").eq("user_id", user_id).execute().data
-    
-    # Fetch all attribute-slot relationships
-    attr_slots = supabase.table("Attr_Slots").select("*").eq("user_id", user_id).execute().data
-    
-    # Fetch all items
-    items = supabase.table("Items").select("*").eq("user_id", user_id).execute().data
-    
-    # Fetch all item attribute values
-    attr_items = supabase.table("Attr_Items").select("*").eq("user_id", user_id).execute().data
-    
-    # Organize attributes by slot
-    slot_attrs = {}
-    for slot in slots:
-        # Get attr_slots for this slot, ordered by order_index
-        slot_attr_relations = [as_rel for as_rel in attr_slots if as_rel["slot_id"] == slot["slot_id"]]
-        slot_attr_relations.sort(key=lambda x: x["order_index"])
+    try:
+        # Fetch all slots for this user, ordered by order_index
+        slots = supabase.table("Slots").select("*").eq("user_id", user_id).order("order_index").execute().data
         
-        # Get the actual attribute objects
-        slot_attributes = []
-        for as_rel in slot_attr_relations:
-            attr = next((a for a in all_attributes if a["attr_id"] == as_rel["attr_id"]), None)
-            if attr:
-                slot_attributes.append(attr)
+        # Fetch all attributes
+        all_attributes = supabase.table("Attributes").select("*").eq("user_id", user_id).execute().data
         
-        slot_attrs[slot["slot_id"]] = slot_attributes
-    
-    # Organize items by slot with their attribute values
-    slot_items = {}
-    for slot in slots:
-        slot_item_list = [item for item in items if item["slot_id"] == slot["slot_id"]]
+        # Fetch all attribute-slot relationships
+        attr_slots = supabase.table("Attr_Slots").select("*").eq("user_id", user_id).execute().data
         
-        # For each item, get its attribute values
-        for item in slot_item_list:
-            item["attr_values"] = {}
-            item_attrs = [ai for ai in attr_items if ai["item_id"] == item["item_id"]]
-            for ai in item_attrs:
-                item["attr_values"][ai["attr_id"]] = ai["value"]
+        # Fetch all items
+        items = supabase.table("Items").select("*").eq("user_id", user_id).execute().data
         
-        slot_items[slot["slot_id"]] = slot_item_list
-    
-    return render_template("items.html", 
-                         slots=slots, 
-                         slot_attrs=slot_attrs,
-                         slot_items=slot_items)
+        # Fetch all item attribute values
+        attr_items = supabase.table("Attr_Items").select("*").eq("user_id", user_id).execute().data
+        
+        # Organize attributes by slot
+        slot_attrs = {}
+        for slot in slots:
+            # Get attr_slots for this slot, ordered by order_index
+            slot_attr_relations = [as_rel for as_rel in attr_slots if as_rel["slot_id"] == slot["slot_id"]]
+            slot_attr_relations.sort(key=lambda x: x["order_index"])
+            
+            # Get the actual attribute objects
+            slot_attributes = []
+            for as_rel in slot_attr_relations:
+                attr = next((a for a in all_attributes if a["attr_id"] == as_rel["attr_id"]), None)
+                if attr:
+                    slot_attributes.append(attr)
+            
+            slot_attrs[slot["slot_id"]] = slot_attributes
+        
+        # Organize items by slot with their attribute values
+        slot_items = {}
+        for slot in slots:
+            slot_item_list = [item for item in items if item["slot_id"] == slot["slot_id"]]
+            
+            # For each item, get its attribute values
+            for item in slot_item_list:
+                item["attr_values"] = {}
+                item_attrs = [ai for ai in attr_items if ai["item_id"] == item["item_id"]]
+                for ai in item_attrs:
+                    item["attr_values"][ai["attr_id"]] = ai["value"]
+            
+            slot_items[slot["slot_id"]] = slot_item_list
+        
+        return render_template("items.html", 
+                             slots=slots, 
+                             slot_attrs=slot_attrs,
+                             slot_items=slot_items)
+    except Exception as e:
+        # Log the error and show a friendly message
+        print(f"Error in list_items: {str(e)}")
+        flash(f"Error loading items: {str(e)}")
+        return render_template("items.html", 
+                             slots=[], 
+                             slot_attrs={},
+                             slot_items={})
 
 
 @app.route("/items/new", methods=["GET", "POST"])
@@ -491,25 +510,37 @@ def add_attribute():
 
 @app.route("/rules")
 def list_rules():
+    if "user_id" not in session:
+        return redirect("/login")
+    
     user_id = session["user_id"]
-    rules = supabase.table("rules").select("*").eq("user_id", user_id).execute().data
-    return render_template("rules.html", rules=rules)
+    
+    try:
+        rules = supabase.table("Rules").select("*").eq("user_id", user_id).execute().data
+        return render_template("rules.html", rules=rules)
+    except Exception as e:
+        print(f"Error in list_rules: {str(e)}")
+        flash(f"Error loading rules: {str(e)}")
+        return render_template("rules.html", rules=[])
 
 
 @app.route("/rules/new", methods=["GET", "POST"])
 def add_rule():
+    if "user_id" not in session:
+        return redirect("/login")
+    
     user_id = session["user_id"]
 
     if request.method == "POST":
-        name = request.form["name"]
-        type_ = request.form["type"]
-        definition = request.form["definition"]  # raw JSON from textarea
+        rule_definition = request.form.get("rule_definition", "").strip()
 
-        supabase.table("rules").insert({
+        if not rule_definition:
+            flash("Rule definition is required.")
+            return redirect(request.referrer)
+
+        supabase.table("Rules").insert({
             "user_id": user_id,
-            "name": name,
-            "rule_type": type_,
-            "definition": supabase.functions.json(definition)
+            "rule_definition": rule_definition
         }).execute()
 
         return redirect("/rules")
