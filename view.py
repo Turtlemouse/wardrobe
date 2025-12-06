@@ -127,43 +127,282 @@ def wardrobe_home():
 
 
 # -------------------------------------------------------
+# SLOTS
+# -------------------------------------------------------
+
+@app.route("/slots/new", methods=["GET", "POST"])
+def add_slot():
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    user_id = session["user_id"]
+
+    if request.method == "POST":
+        slot_name = request.form.get("slot_name", "").strip()
+        order_index = int(request.form.get("order_index", 0))
+
+        if not slot_name:
+            flash("Slot name is required.")
+            return redirect(request.referrer)
+
+        # Shift existing slots at or after this order_index
+        existing_slots = supabase.table("Slots").select("*").eq("user_id", user_id).gte("order_index", order_index).execute().data
+        for slot in existing_slots:
+            supabase.table("Slots").update({"order_index": slot["order_index"] + 1}).eq("slot_id", slot["slot_id"]).execute()
+
+        # Insert new slot
+        supabase.table("Slots").insert({
+            "user_id": user_id,
+            "slot_name": slot_name,
+            "order_index": order_index
+        }).execute()
+
+        return redirect("/items")
+
+    order_index = request.args.get("order_index", 0)
+    return render_template("add_slot.html", order_index=order_index)
+
+
+@app.route("/slots/edit/<slot_id>", methods=["GET", "POST"])
+def edit_slot(slot_id):
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    user_id = session["user_id"]
+
+    if request.method == "POST":
+        slot_name = request.form.get("slot_name", "").strip()
+
+        if not slot_name:
+            flash("Slot name is required.")
+            return redirect(request.referrer)
+
+        supabase.table("Slots").update({"slot_name": slot_name}).eq("slot_id", slot_id).eq("user_id", user_id).execute()
+        return redirect("/items")
+
+    slot = supabase.table("Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).execute().data
+    if not slot:
+        flash("Slot not found.")
+        return redirect("/items")
+
+    return render_template("edit_slot.html", slot=slot[0])
+
+
+@app.route("/slots/delete/<slot_id>", methods=["POST"])
+def delete_slot(slot_id):
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    user_id = session["user_id"]
+    
+    # Get the slot to find its order_index
+    slot = supabase.table("Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).execute().data
+    if slot:
+        order_index = slot[0]["order_index"]
+        
+        # Delete the slot (cascade will handle items, attr_slots, etc.)
+        supabase.table("Slots").delete().eq("slot_id", slot_id).eq("user_id", user_id).execute()
+        
+        # Shift down slots that come after
+        later_slots = supabase.table("Slots").select("*").eq("user_id", user_id).gt("order_index", order_index).execute().data
+        for s in later_slots:
+            supabase.table("Slots").update({"order_index": s["order_index"] - 1}).eq("slot_id", s["slot_id"]).execute()
+
+    return redirect("/items")
+
+
+# -------------------------------------------------------
 # ITEMS
 # -------------------------------------------------------
 
 @app.route("/items")
 def list_items():
+    if "user_id" not in session:
+        return redirect("/login")
+    
     user_id = session["user_id"]
-    items = supabase.table("items").select("*").eq("user_id", user_id).execute().data
-    return render_template("items.html", items=items)
+    
+    # Fetch all slots for this user, ordered by order_index
+    slots = supabase.table("Slots").select("*").eq("user_id", user_id).order("order_index").execute().data
+    
+    # Fetch all attributes
+    all_attributes = supabase.table("Attributes").select("*").eq("user_id", user_id).execute().data
+    
+    # Fetch all attribute-slot relationships
+    attr_slots = supabase.table("Attr_Slots").select("*").eq("user_id", user_id).execute().data
+    
+    # Fetch all items
+    items = supabase.table("Items").select("*").eq("user_id", user_id).execute().data
+    
+    # Fetch all item attribute values
+    attr_items = supabase.table("Attr_Items").select("*").eq("user_id", user_id).execute().data
+    
+    # Organize attributes by slot
+    slot_attrs = {}
+    for slot in slots:
+        # Get attr_slots for this slot, ordered by order_index
+        slot_attr_relations = [as_rel for as_rel in attr_slots if as_rel["slot_id"] == slot["slot_id"]]
+        slot_attr_relations.sort(key=lambda x: x["order_index"])
+        
+        # Get the actual attribute objects
+        slot_attributes = []
+        for as_rel in slot_attr_relations:
+            attr = next((a for a in all_attributes if a["attr_id"] == as_rel["attr_id"]), None)
+            if attr:
+                slot_attributes.append(attr)
+        
+        slot_attrs[slot["slot_id"]] = slot_attributes
+    
+    # Organize items by slot with their attribute values
+    slot_items = {}
+    for slot in slots:
+        slot_item_list = [item for item in items if item["slot_id"] == slot["slot_id"]]
+        
+        # For each item, get its attribute values
+        for item in slot_item_list:
+            item["attr_values"] = {}
+            item_attrs = [ai for ai in attr_items if ai["item_id"] == item["item_id"]]
+            for ai in item_attrs:
+                item["attr_values"][ai["attr_id"]] = ai["value"]
+        
+        slot_items[slot["slot_id"]] = slot_item_list
+    
+    return render_template("items.html", 
+                         slots=slots, 
+                         slot_attrs=slot_attrs,
+                         slot_items=slot_items)
 
 
 @app.route("/items/new", methods=["GET", "POST"])
 def add_item():
+    if "user_id" not in session:
+        return redirect("/login")
+    
     user_id = session["user_id"]
+    slot_id = request.args.get("slot_id")
 
     if request.method == "POST":
-        name = request.form["name"]
+        item_name = request.form.get("item_name", "").strip()
+        slot_id = request.form.get("slot_id")
 
-        attributes = {}  # start empty
+        if not item_name or not slot_id:
+            flash("Item name and slot are required.")
+            return redirect(request.referrer)
 
-        # any custom attribute fields
+        # Create the item
+        new_item = supabase.table("Items").insert({
+            "user_id": user_id,
+            "item_name": item_name,
+            "slot_id": slot_id,
+            "times_generated": 0,
+            "times_worn": 0
+        }).execute()
+
+        item_id = new_item.data[0]["item_id"]
+
+        # Add attribute values
         for key, value in request.form.items():
             if key.startswith("attr_"):
-                attr_name = key.replace("attr_", "")
-                attributes[attr_name] = value
-
-        supabase.table("items").insert({
-            "user_id": user_id,
-            "name": name,
-            "attributes": attributes
-        }).execute()
+                attr_id = key.replace("attr_", "")
+                if value.strip():  # Only insert if value is not empty
+                    supabase.table("Attr_Items").insert({
+                        "user_id": user_id,
+                        "attr_id": attr_id,
+                        "item_id": item_id,
+                        "value": value.strip()
+                    }).execute()
 
         return redirect("/items")
 
-    # fetch attribute definitions for dynamic form
-    attrs = supabase.table("item_attributes").select("*").eq("user_id", user_id).execute().data
+    # Fetch slot info
+    slot = supabase.table("Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).execute().data
+    if not slot:
+        flash("Slot not found.")
+        return redirect("/items")
 
-    return render_template("add_item.html", attributes=attrs)
+    # Fetch attributes for this slot
+    attr_slots = supabase.table("Attr_Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).order("order_index").execute().data
+    
+    attributes = []
+    for as_rel in attr_slots:
+        attr = supabase.table("Attributes").select("*").eq("attr_id", as_rel["attr_id"]).execute().data
+        if attr:
+            attributes.append(attr[0])
+
+    return render_template("add_item.html", slot=slot[0], attributes=attributes)
+
+
+@app.route("/items/edit/<item_id>", methods=["GET", "POST"])
+def edit_item(item_id):
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    user_id = session["user_id"]
+
+    if request.method == "POST":
+        item_name = request.form.get("item_name", "").strip()
+
+        if not item_name:
+            flash("Item name is required.")
+            return redirect(request.referrer)
+
+        # Update item name
+        supabase.table("Items").update({"item_name": item_name}).eq("item_id", item_id).eq("user_id", user_id).execute()
+
+        # Update attribute values
+        # First, delete existing attr_items for this item
+        supabase.table("Attr_Items").delete().eq("item_id", item_id).eq("user_id", user_id).execute()
+
+        # Then insert new values
+        for key, value in request.form.items():
+            if key.startswith("attr_"):
+                attr_id = key.replace("attr_", "")
+                if value.strip():
+                    supabase.table("Attr_Items").insert({
+                        "user_id": user_id,
+                        "attr_id": attr_id,
+                        "item_id": item_id,
+                        "value": value.strip()
+                    }).execute()
+
+        return redirect("/items")
+
+    # Fetch item
+    item = supabase.table("Items").select("*").eq("item_id", item_id).eq("user_id", user_id).execute().data
+    if not item:
+        flash("Item not found.")
+        return redirect("/items")
+    
+    item = item[0]
+    slot_id = item["slot_id"]
+
+    # Fetch slot
+    slot = supabase.table("Slots").select("*").eq("slot_id", slot_id).execute().data[0]
+
+    # Fetch attributes for this slot
+    attr_slots = supabase.table("Attr_Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).order("order_index").execute().data
+    
+    attributes = []
+    for as_rel in attr_slots:
+        attr = supabase.table("Attributes").select("*").eq("attr_id", as_rel["attr_id"]).execute().data
+        if attr:
+            attributes.append(attr[0])
+
+    # Fetch current attribute values
+    attr_items = supabase.table("Attr_Items").select("*").eq("item_id", item_id).eq("user_id", user_id).execute().data
+    attr_values = {ai["attr_id"]: ai["value"] for ai in attr_items}
+
+    return render_template("edit_item.html", item=item, slot=slot, attributes=attributes, attr_values=attr_values)
+
+
+@app.route("/items/delete/<item_id>", methods=["POST"])
+def delete_item(item_id):
+    if "user_id" not in session:
+        return redirect("/login")
+    
+    user_id = session["user_id"]
+    supabase.table("Items").delete().eq("item_id", item_id).eq("user_id", user_id).execute()
+    return redirect("/items")
 
 
 # -------------------------------------------------------
@@ -172,35 +411,78 @@ def add_item():
 
 @app.route("/attributes")
 def list_attributes():
+    if "user_id" not in session:
+        return redirect("/login")
+    
     user_id = session["user_id"]
-    attrs = supabase.table("item_attributes").select("*").eq("user_id", user_id).execute().data
+    attrs = supabase.table("Attributes").select("*").eq("user_id", user_id).execute().data
     return render_template("attributes.html", attributes=attrs)
 
 
 @app.route("/attributes/new", methods=["GET", "POST"])
 def add_attribute():
+    if "user_id" not in session:
+        return redirect("/login")
+    
     user_id = session["user_id"]
+    slot_id = request.args.get("slot_id")
+    order_index = int(request.args.get("order_index", 0))
 
     if request.method == "POST":
-        name = request.form["name"]
-        type_ = request.form["type"]
+        attr_name = request.form.get("attr_name", "").strip()
+        attr_type = request.form.get("attr_type", "string")
         allowed_values = request.form.get("allowed_values", "")
+        allow_multiple = request.form.get("allow_multiple") == "on"
+        slot_id = request.form.get("slot_id")
+        order_index = int(request.form.get("order_index", 0))
 
+        if not attr_name:
+            flash("Attribute name is required.")
+            return redirect(request.referrer)
+
+        # Parse allowed values
+        allowed_values_list = None
         if allowed_values.strip():
-            allowed_values = allowed_values.split(",")
-        else:
-            allowed_values = None
+            allowed_values_list = [v.strip() for v in allowed_values.split(",") if v.strip()]
 
-        supabase.table("item_attributes").insert({
+        # Create attribute
+        new_attr = supabase.table("Attributes").insert({
             "user_id": user_id,
-            "name": name,
-            "type": type_,
-            "allowed_values": allowed_values
+            "attr_name": attr_name,
+            "attr_type": attr_type,
+            "attr_possiblevals": allowed_values_list,
+            "allow_multiple": allow_multiple
         }).execute()
+
+        attr_id = new_attr.data[0]["attr_id"]
+
+        # If slot_id is provided, link it to the slot
+        if slot_id:
+            # Shift existing attributes at or after this order_index
+            existing_attr_slots = supabase.table("Attr_Slots").select("*").eq("slot_id", slot_id).gte("order_index", order_index).execute().data
+            for as_rel in existing_attr_slots:
+                supabase.table("Attr_Slots").update({"order_index": as_rel["order_index"] + 1}).eq("attr_slot_id", as_rel["attr_slot_id"]).execute()
+
+            # Create attr_slot relationship
+            supabase.table("Attr_Slots").insert({
+                "user_id": user_id,
+                "attr_id": attr_id,
+                "slot_id": slot_id,
+                "order_index": order_index
+            }).execute()
+
+            return redirect("/items")
 
         return redirect("/attributes")
 
-    return render_template("add_attribute.html")
+    # If adding to a specific slot, get slot info
+    slot = None
+    if slot_id:
+        slot_data = supabase.table("Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).execute().data
+        if slot_data:
+            slot = slot_data[0]
+
+    return render_template("add_attribute.html", slot=slot, order_index=order_index)
 
 
 # -------------------------------------------------------
