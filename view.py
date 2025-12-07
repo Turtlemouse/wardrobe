@@ -6,6 +6,85 @@ import os
 app = Flask(__name__)
 app.secret_key = os.environ["SECRET_KEY"]
 
+DEFAULT_USER_EMAIL = "DEFAULT_DEFAULT"
+
+
+# -------------------------------------------------------
+# HELPER FUNCTION TO COPY DEFAULT DATA
+# -------------------------------------------------------
+
+def copy_default_data_to_user(new_user_id):
+    """
+    Copies slots, attributes, and attribute-slot relationships from the default template user
+    to a newly registered user.
+    """
+    try:
+        # Get the default user
+        default_user = supabase.table("users").select("*").eq("email", DEFAULT_USER_EMAIL).execute().data
+        if not default_user:
+            print("No default template user found. Skipping default data copy.")
+            return
+        
+        default_user_id = default_user[0]["id"]
+        
+        # 1. Copy Slots
+        default_slots = supabase.table("slots").select("*").eq("user_id", default_user_id).execute().data
+        slot_id_mapping = {}  # Maps old slot_id to new slot_id
+        
+        for slot in default_slots:
+            new_slot = supabase.table("slots").insert({
+                "user_id": new_user_id,
+                "slot_name": slot["slot_name"],
+                "order_index": slot["order_index"]
+            }).execute()
+            
+            slot_id_mapping[slot["slot_id"]] = new_slot.data[0]["slot_id"]
+        
+        # 2. Copy Attributes
+        default_attributes = supabase.table("attributes").select("*").eq("user_id", default_user_id).execute().data
+        attr_id_mapping = {}  # Maps old attr_id to new attr_id
+        
+        for attr in default_attributes:
+            new_attr = supabase.table("attributes").insert({
+                "user_id": new_user_id,
+                "attr_name": attr["attr_name"],
+                "attr_type": attr["attr_type"],
+                "attr_possiblevals": attr["attr_possiblevals"],
+                "allow_multiple": attr["allow_multiple"]
+            }).execute()
+            
+            attr_id_mapping[attr["attr_id"]] = new_attr.data[0]["attr_id"]
+        
+        # 3. Copy Attribute-Slot relationships
+        default_attr_slots = supabase.table("attr_slots").select("*").eq("user_id", default_user_id).execute().data
+        
+        for attr_slot in default_attr_slots:
+            old_slot_id = attr_slot["slot_id"]
+            old_attr_id = attr_slot["attr_id"]
+            
+            # Only copy if both the slot and attribute were successfully copied
+            if old_slot_id in slot_id_mapping and old_attr_id in attr_id_mapping:
+                supabase.table("attr_slots").insert({
+                    "user_id": new_user_id,
+                    "attr_id": attr_id_mapping[old_attr_id],
+                    "slot_id": slot_id_mapping[old_slot_id],
+                    "order_index": attr_slot["order_index"]
+                }).execute()
+        
+        # 4. Copy Rules (if any)
+        default_rules = supabase.table("rules").select("*").eq("user_id", default_user_id).execute().data
+        
+        for rule in default_rules:
+            supabase.table("rules").insert({
+                "user_id": new_user_id,
+                "rule_definition": rule["rule_definition"]
+            }).execute()
+        
+        print(f"Successfully copied default data to user {new_user_id}")
+        
+    except Exception as e:
+        print(f"Error copying default data: {str(e)}")
+        # Don't fail signup if default data copy fails
 
 # -------------------------------------------------------
 # AUTH
@@ -115,9 +194,9 @@ def wardrobe_home():
     user_id = session["user_id"]
 
     try:
-        items = supabase.table("Items").select("*").eq("user_id", user_id).execute().data
-        attributes = supabase.table("Attributes").select("*").eq("user_id", user_id).execute().data
-        rules = supabase.table("Rules").select("*").eq("user_id", user_id).execute().data
+        items = supabase.table("items").select("*").eq("user_id", user_id).execute().data
+        attributes = supabase.table("attributes").select("*").eq("user_id", user_id).execute().data
+        rules = supabase.table("rules").select("*").eq("user_id", user_id).execute().data
 
         return render_template(
             "wardrobe.html",
@@ -156,12 +235,12 @@ def add_slot():
             return redirect(request.referrer)
 
         # Shift existing slots at or after this order_index
-        existing_slots = supabase.table("Slots").select("*").eq("user_id", user_id).gte("order_index", order_index).execute().data
+        existing_slots = supabase.table("slots").select("*").eq("user_id", user_id).gte("order_index", order_index).execute().data
         for slot in existing_slots:
-            supabase.table("Slots").update({"order_index": slot["order_index"] + 1}).eq("slot_id", slot["slot_id"]).execute()
+            supabase.table("slots").update({"order_index": slot["order_index"] + 1}).eq("slot_id", slot["slot_id"]).execute()
 
         # Insert new slot
-        supabase.table("Slots").insert({
+        supabase.table("slots").insert({
             "user_id": user_id,
             "slot_name": slot_name,
             "order_index": order_index
@@ -187,10 +266,10 @@ def edit_slot(slot_id):
             flash("Slot name is required.")
             return redirect(request.referrer)
 
-        supabase.table("Slots").update({"slot_name": slot_name}).eq("slot_id", slot_id).eq("user_id", user_id).execute()
+        supabase.table("slots").update({"slot_name": slot_name}).eq("slot_id", slot_id).eq("user_id", user_id).execute()
         return redirect("/items")
 
-    slot = supabase.table("Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).execute().data
+    slot = supabase.table("slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).execute().data
     if not slot:
         flash("Slot not found.")
         return redirect("/items")
@@ -206,17 +285,17 @@ def delete_slot(slot_id):
     user_id = session["user_id"]
     
     # Get the slot to find its order_index
-    slot = supabase.table("Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).execute().data
+    slot = supabase.table("slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).execute().data
     if slot:
         order_index = slot[0]["order_index"]
         
         # Delete the slot (cascade will handle items, attr_slots, etc.)
-        supabase.table("Slots").delete().eq("slot_id", slot_id).eq("user_id", user_id).execute()
+        supabase.table("slots").delete().eq("slot_id", slot_id).eq("user_id", user_id).execute()
         
         # Shift down slots that come after
-        later_slots = supabase.table("Slots").select("*").eq("user_id", user_id).gt("order_index", order_index).execute().data
+        later_slots = supabase.table("slots").select("*").eq("user_id", user_id).gt("order_index", order_index).execute().data
         for s in later_slots:
-            supabase.table("Slots").update({"order_index": s["order_index"] - 1}).eq("slot_id", s["slot_id"]).execute()
+            supabase.table("slots").update({"order_index": s["order_index"] - 1}).eq("slot_id", s["slot_id"]).execute()
 
     return redirect("/items")
 
@@ -234,19 +313,19 @@ def list_items():
     
     try:
         # Fetch all slots for this user, ordered by order_index
-        slots = supabase.table("Slots").select("*").eq("user_id", user_id).order("order_index").execute().data
+        slots = supabase.table("slots").select("*").eq("user_id", user_id).order("order_index").execute().data
         
         # Fetch all attributes
-        all_attributes = supabase.table("Attributes").select("*").eq("user_id", user_id).execute().data
+        all_attributes = supabase.table("attributes").select("*").eq("user_id", user_id).execute().data
         
         # Fetch all attribute-slot relationships
-        attr_slots = supabase.table("Attr_Slots").select("*").eq("user_id", user_id).execute().data
+        attr_slots = supabase.table("attr_Slots").select("*").eq("user_id", user_id).execute().data
         
         # Fetch all items
-        items = supabase.table("Items").select("*").eq("user_id", user_id).execute().data
+        items = supabase.table("items").select("*").eq("user_id", user_id).execute().data
         
         # Fetch all item attribute values
-        attr_items = supabase.table("Attr_Items").select("*").eq("user_id", user_id).execute().data
+        attr_items = supabase.table("attr_Items").select("*").eq("user_id", user_id).execute().data
         
         # Organize attributes by slot
         slot_attrs = {}
@@ -309,7 +388,7 @@ def add_item():
             return redirect(request.referrer)
 
         # Create the item
-        new_item = supabase.table("Items").insert({
+        new_item = supabase.table("items").insert({
             "user_id": user_id,
             "item_name": item_name,
             "slot_id": slot_id,
@@ -324,7 +403,7 @@ def add_item():
             if key.startswith("attr_"):
                 attr_id = key.replace("attr_", "")
                 if value.strip():  # Only insert if value is not empty
-                    supabase.table("Attr_Items").insert({
+                    supabase.table("attr_Items").insert({
                         "user_id": user_id,
                         "attr_id": attr_id,
                         "item_id": item_id,
@@ -334,17 +413,17 @@ def add_item():
         return redirect("/items")
 
     # Fetch slot info
-    slot = supabase.table("Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).execute().data
+    slot = supabase.table("slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).execute().data
     if not slot:
         flash("Slot not found.")
         return redirect("/items")
 
     # Fetch attributes for this slot
-    attr_slots = supabase.table("Attr_Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).order("order_index").execute().data
+    attr_slots = supabase.table("attr_Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).order("order_index").execute().data
     
     attributes = []
     for as_rel in attr_slots:
-        attr = supabase.table("Attributes").select("*").eq("attr_id", as_rel["attr_id"]).execute().data
+        attr = supabase.table("attributes").select("*").eq("attr_id", as_rel["attr_id"]).execute().data
         if attr:
             attributes.append(attr[0])
 
@@ -366,18 +445,18 @@ def edit_item(item_id):
             return redirect(request.referrer)
 
         # Update item name
-        supabase.table("Items").update({"item_name": item_name}).eq("item_id", item_id).eq("user_id", user_id).execute()
+        supabase.table("items").update({"item_name": item_name}).eq("item_id", item_id).eq("user_id", user_id).execute()
 
         # Update attribute values
         # First, delete existing attr_items for this item
-        supabase.table("Attr_Items").delete().eq("item_id", item_id).eq("user_id", user_id).execute()
+        supabase.table("attr_Items").delete().eq("item_id", item_id).eq("user_id", user_id).execute()
 
         # Then insert new values
         for key, value in request.form.items():
             if key.startswith("attr_"):
                 attr_id = key.replace("attr_", "")
                 if value.strip():
-                    supabase.table("Attr_Items").insert({
+                    supabase.table("attr_Items").insert({
                         "user_id": user_id,
                         "attr_id": attr_id,
                         "item_id": item_id,
@@ -387,7 +466,7 @@ def edit_item(item_id):
         return redirect("/items")
 
     # Fetch item
-    item = supabase.table("Items").select("*").eq("item_id", item_id).eq("user_id", user_id).execute().data
+    item = supabase.table("items").select("*").eq("item_id", item_id).eq("user_id", user_id).execute().data
     if not item:
         flash("Item not found.")
         return redirect("/items")
@@ -396,19 +475,19 @@ def edit_item(item_id):
     slot_id = item["slot_id"]
 
     # Fetch slot
-    slot = supabase.table("Slots").select("*").eq("slot_id", slot_id).execute().data[0]
+    slot = supabase.table("slots").select("*").eq("slot_id", slot_id).execute().data[0]
 
     # Fetch attributes for this slot
-    attr_slots = supabase.table("Attr_Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).order("order_index").execute().data
+    attr_slots = supabase.table("attr_Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).order("order_index").execute().data
     
     attributes = []
     for as_rel in attr_slots:
-        attr = supabase.table("Attributes").select("*").eq("attr_id", as_rel["attr_id"]).execute().data
+        attr = supabase.table("attributes").select("*").eq("attr_id", as_rel["attr_id"]).execute().data
         if attr:
             attributes.append(attr[0])
 
     # Fetch current attribute values
-    attr_items = supabase.table("Attr_Items").select("*").eq("item_id", item_id).eq("user_id", user_id).execute().data
+    attr_items = supabase.table("attr_Items").select("*").eq("item_id", item_id).eq("user_id", user_id).execute().data
     attr_values = {ai["attr_id"]: ai["value"] for ai in attr_items}
 
     return render_template("edit_item.html", item=item, slot=slot, attributes=attributes, attr_values=attr_values)
@@ -420,7 +499,7 @@ def delete_item(item_id):
         return redirect("/login")
     
     user_id = session["user_id"]
-    supabase.table("Items").delete().eq("item_id", item_id).eq("user_id", user_id).execute()
+    supabase.table("items").delete().eq("item_id", item_id).eq("user_id", user_id).execute()
     return redirect("/items")
 
 
@@ -434,7 +513,7 @@ def list_attributes():
         return redirect("/login")
     
     user_id = session["user_id"]
-    attrs = supabase.table("Attributes").select("*").eq("user_id", user_id).execute().data
+    attrs = supabase.table("attributes").select("*").eq("user_id", user_id).execute().data
     return render_template("attributes.html", attributes=attrs)
 
 
@@ -465,7 +544,7 @@ def add_attribute():
             allowed_values_list = [v.strip() for v in allowed_values.split(",") if v.strip()]
 
         # Create attribute
-        new_attr = supabase.table("Attributes").insert({
+        new_attr = supabase.table("attributes").insert({
             "user_id": user_id,
             "attr_name": attr_name,
             "attr_type": attr_type,
@@ -478,12 +557,12 @@ def add_attribute():
         # If slot_id is provided, link it to the slot
         if slot_id:
             # Shift existing attributes at or after this order_index
-            existing_attr_slots = supabase.table("Attr_Slots").select("*").eq("slot_id", slot_id).gte("order_index", order_index).execute().data
+            existing_attr_slots = supabase.table("attr_Slots").select("*").eq("slot_id", slot_id).gte("order_index", order_index).execute().data
             for as_rel in existing_attr_slots:
-                supabase.table("Attr_Slots").update({"order_index": as_rel["order_index"] + 1}).eq("attr_slot_id", as_rel["attr_slot_id"]).execute()
+                supabase.table("attr_Slots").update({"order_index": as_rel["order_index"] + 1}).eq("attr_slot_id", as_rel["attr_slot_id"]).execute()
 
             # Create attr_slot relationship
-            supabase.table("Attr_Slots").insert({
+            supabase.table("attr_Slots").insert({
                 "user_id": user_id,
                 "attr_id": attr_id,
                 "slot_id": slot_id,
@@ -497,7 +576,7 @@ def add_attribute():
     # If adding to a specific slot, get slot info
     slot = None
     if slot_id:
-        slot_data = supabase.table("Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).execute().data
+        slot_data = supabase.table("slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).execute().data
         if slot_data:
             slot = slot_data[0]
 
@@ -516,7 +595,7 @@ def list_rules():
     user_id = session["user_id"]
     
     try:
-        rules = supabase.table("Rules").select("*").eq("user_id", user_id).execute().data
+        rules = supabase.table("rules").select("*").eq("user_id", user_id).execute().data
         return render_template("rules.html", rules=rules)
     except Exception as e:
         print(f"Error in list_rules: {str(e)}")
@@ -538,7 +617,7 @@ def add_rule():
             flash("Rule definition is required.")
             return redirect(request.referrer)
 
-        supabase.table("Rules").insert({
+        supabase.table("rules").insert({
             "user_id": user_id,
             "rule_definition": rule_definition
         }).execute()
