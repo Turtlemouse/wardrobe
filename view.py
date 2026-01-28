@@ -325,7 +325,7 @@ def list_items():
         items = supabase.table("items").select("*").eq("user_id", user_id).execute().data
         
         # Fetch all item attribute values
-        attr_items = supabase.table("attr_Items").select("*").eq("user_id", user_id).execute().data
+        attr_items = supabase.table("attr_items").select("*").eq("user_id", user_id).execute().data
         
         # Organize attributes by slot
         slot_attrs = {}
@@ -403,7 +403,7 @@ def add_item():
             if key.startswith("attr_"):
                 attr_id = key.replace("attr_", "")
                 if value.strip():  # Only insert if value is not empty
-                    supabase.table("attr_Items").insert({
+                    supabase.table("attr_items").insert({
                         "user_id": user_id,
                         "attr_id": attr_id,
                         "item_id": item_id,
@@ -449,14 +449,14 @@ def edit_item(item_id):
 
         # Update attribute values
         # First, delete existing attr_items for this item
-        supabase.table("attr_Items").delete().eq("item_id", item_id).eq("user_id", user_id).execute()
+        supabase.table("attr_items").delete().eq("item_id", item_id).eq("user_id", user_id).execute()
 
         # Then insert new values
         for key, value in request.form.items():
             if key.startswith("attr_"):
                 attr_id = key.replace("attr_", "")
                 if value.strip():
-                    supabase.table("attr_Items").insert({
+                    supabase.table("attr_items").insert({
                         "user_id": user_id,
                         "attr_id": attr_id,
                         "item_id": item_id,
@@ -487,7 +487,7 @@ def edit_item(item_id):
             attributes.append(attr[0])
 
     # Fetch current attribute values
-    attr_items = supabase.table("attr_Items").select("*").eq("item_id", item_id).eq("user_id", user_id).execute().data
+    attr_items = supabase.table("attr_items").select("*").eq("item_id", item_id).eq("user_id", user_id).execute().data
     attr_values = {ai["attr_id"]: ai["value"] for ai in attr_items}
 
     return render_template("edit_item.html", item=item, slot=slot, attributes=attributes, attr_values=attr_values)
