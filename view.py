@@ -319,7 +319,7 @@ def list_items():
         all_attributes = supabase.table("attributes").select("*").eq("user_id", user_id).execute().data
         
         # Fetch all attribute-slot relationships
-        attr_slots = supabase.table("attr_Slots").select("*").eq("user_id", user_id).execute().data
+        attr_slots = supabase.table("attr_slots").select("*").eq("user_id", user_id).execute().data
         
         # Fetch all items
         items = supabase.table("items").select("*").eq("user_id", user_id).execute().data
@@ -419,7 +419,7 @@ def add_item():
         return redirect("/items")
 
     # Fetch attributes for this slot
-    attr_slots = supabase.table("attr_Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).order("order_index").execute().data
+    attr_slots = supabase.table("attr_slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).order("order_index").execute().data
     
     attributes = []
     for as_rel in attr_slots:
@@ -478,7 +478,7 @@ def edit_item(item_id):
     slot = supabase.table("slots").select("*").eq("slot_id", slot_id).execute().data[0]
 
     # Fetch attributes for this slot
-    attr_slots = supabase.table("attr_Slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).order("order_index").execute().data
+    attr_slots = supabase.table("attr_slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).order("order_index").execute().data
     
     attributes = []
     for as_rel in attr_slots:
@@ -557,12 +557,12 @@ def add_attribute():
         # If slot_id is provided, link it to the slot
         if slot_id:
             # Shift existing attributes at or after this order_index
-            existing_attr_slots = supabase.table("attr_Slots").select("*").eq("slot_id", slot_id).gte("order_index", order_index).execute().data
+            existing_attr_slots = supabase.table("attr_slots").select("*").eq("slot_id", slot_id).gte("order_index", order_index).execute().data
             for as_rel in existing_attr_slots:
-                supabase.table("attr_Slots").update({"order_index": as_rel["order_index"] + 1}).eq("attr_slot_id", as_rel["attr_slot_id"]).execute()
+                supabase.table("attr_slots").update({"order_index": as_rel["order_index"] + 1}).eq("attr_slot_id", as_rel["attr_slot_id"]).execute()
 
             # Create attr_slot relationship
-            supabase.table("attr_Slots").insert({
+            supabase.table("attr_slots").insert({
                 "user_id": user_id,
                 "attr_id": attr_id,
                 "slot_id": slot_id,
