@@ -1,0 +1,69 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ 'Edit' if item else 'Add' }} Item - My Wardrobe{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 700px;">
+    <div class="page-header">
+        <h1>{{ 'Edit' if item else 'Add' }} Item</h1>
+        <p class="subtitle">{{ 'Update' if item else 'Add a new' }} item {{ 'in' if item else 'to' }} {{ slot.slot_name }}</p>
+    </div>
+
+    <div class="alert-box alert-info" style="margin-bottom: 20px;">
+        {{ 'Editing' if item else 'Adding' }} item {{ 'in' if item else 'to' }} <strong>{{ slot.slot_name }}</strong> slot
+    </div>
+
+    <div class="card" style="width: 100%;">
+        <form method="POST">
+            <label for="item_name">Item Name *</label>
+            <input type="text" id="item_name" name="item_name" value="{{ item.item_name if item else '' }}" placeholder="e.g., Blue Oxford Shirt" required autofocus>
+
+            {% if not item %}
+            <input type="hidden" name="slot_id" value="{{ slot.slot_id }}">
+            {% endif %}
+
+            {% if attributes %}
+            <div style="border-top: 2px solid #f0f0f0; margin-top: 20px; padding-top: 20px;">
+                <h3 style="margin-bottom: 15px;">Attributes</h3>
+                
+                {% for attr in attributes %}
+                <div>
+                    <label for="attr_{{ attr.attr_id }}">{{ attr.attr_name }}</label>
+                    
+                    {% set current_value = attr_values.get(attr.attr_id, '') if item else '' %}
+                    
+                    {% if attr.attr_possiblevals %}
+                        <select id="attr_{{ attr.attr_id }}" name="attr_{{ attr.attr_id }}">
+                            <option value="">-- Select --</option>
+                            {% for val in attr.attr_possiblevals %}
+                            <option value="{{ val }}" {% if current_value == val %}selected{% endif %}>{{ val }}</option>
+                            {% endfor %}
+                        </select>
+                    {% elif attr.attr_type == 'number' %}
+                        <input type="number" id="attr_{{ attr.attr_id }}" name="attr_{{ attr.attr_id }}" value="{{ current_value }}" step="any">
+                    {% elif attr.attr_type == 'bool' %}
+                        <select id="attr_{{ attr.attr_id }}" name="attr_{{ attr.attr_id }}">
+                            <option value="">-- Select --</option>
+                            <option value="true" {% if current_value == 'true' %}selected{% endif %}>Yes</option>
+                            <option value="false" {% if current_value == 'false' %}selected{% endif %}>No</option>
+                        </select>
+                    {% else %}
+                        <input type="text" id="attr_{{ attr.attr_id }}" name="attr_{{ attr.attr_id }}" value="{{ current_value }}">
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state" style="margin-top: 20px;">
+                <p>No attributes defined for this slot yet.{% if not item %} You can add attributes from the items page.{% endif %}</p>
+            </div>
+            {% endif %}
+
+            <div class="flex" style="gap: 10px; margin-top: 20px;">
+                <a href="/items" class="btn" style="background: transparent; color: #666; border: 1px solid #ddd;">Cancel</a>
+                <button type="submit" class="btn btn-green" style="flex: 1;">{{ 'Update' if item else 'Add' }} Item</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
