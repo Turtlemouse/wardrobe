@@ -138,6 +138,75 @@ def signup():
 
         # Insert returns a list with the created row
         user = new_user.data[0]
+        new_user_id = user["user_id"]
+
+        # ---------------------------
+        # COPY EVERYTHING FROM DEFAULT_DEFAULT USER
+        # ---------------------------
+        try:
+            # Get the DEFAULT_DEFAULT user
+            default_user = supabase.table("users").select("user_id").eq("email", "DEFAULT_DEFAULT").execute().data
+            
+            if default_user:
+                default_user_id = default_user[0]["user_id"]
+                
+                # 1. Copy Slots and create mapping
+                default_slots = supabase.table("slots").select("*").eq("user_id", default_user_id).order("order_index").execute().data
+                slot_id_mapping = {}
+                
+                for slot in default_slots:
+                    new_slot = supabase.table("slots").insert({
+                        "user_id": new_user_id,
+                        "slot_name": slot["slot_name"],
+                        "order_index": slot["order_index"]
+                    }).execute()
+                    slot_id_mapping[slot["slot_id"]] = new_slot.data[0]["slot_id"]
+                
+                # 2. Copy Attributes and create mapping
+                default_attributes = supabase.table("attributes").select("*").eq("user_id", default_user_id).execute().data
+                attr_id_mapping = {}
+                
+                for attr in default_attributes:
+                    new_attr = supabase.table("attributes").insert({
+                        "user_id": new_user_id,
+                        "attr_name": attr["attr_name"],
+                        "attr_type": attr["attr_type"],
+                        "attr_possiblevals": attr["attr_possiblevals"],
+                        "allow_multiple": attr["allow_multiple"]
+                    }).execute()
+                    attr_id_mapping[attr["attr_id"]] = new_attr.data[0]["attr_id"]
+                
+                # 3. Copy Attribute-Slot relationships
+                default_attr_slots = supabase.table("attr_slots").select("*").eq("user_id", default_user_id).execute().data
+                
+                for attr_slot in default_attr_slots:
+                    old_slot_id = attr_slot["slot_id"]
+                    old_attr_id = attr_slot["attr_id"]
+                    
+                    if old_slot_id in slot_id_mapping and old_attr_id in attr_id_mapping:
+                        supabase.table("attr_slots").insert({
+                            "user_id": new_user_id,
+                            "attr_id": attr_id_mapping[old_attr_id],
+                            "slot_id": slot_id_mapping[old_slot_id],
+                            "order_index": attr_slot["order_index"]
+                        }).execute()
+                
+                # 4. Copy Rules
+                default_rules = supabase.table("rules").select("*").eq("user_id", default_user_id).execute().data
+                
+                for rule in default_rules:
+                    supabase.table("rules").insert({
+                        "user_id": new_user_id,
+                        "rule_definition": rule["rule_definition"]
+                    }).execute()
+                
+                print(f"Successfully copied default data to user {new_user_id}")
+            else:
+                print("No DEFAULT_DEFAULT user found - skipping default data copy")
+                
+        except Exception as e:
+            print(f"Error copying default data: {str(e)}")
+            # Don't fail signup if copy fails
 
         # ---------------------------
         # Start session
