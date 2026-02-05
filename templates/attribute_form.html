@@ -1,0 +1,135 @@
+{% extends "layout.html" %}
+
+{% block title %}Add Attribute to {{ slot.slot_name }} - My Wardrobe{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 700px;">
+    <div class="page-header">
+        <h1>Add Attribute</h1>
+        <p class="subtitle">Add attribute to {{ slot.slot_name }}</p>
+    </div>
+
+    <div class="alert-box alert-info" style="margin-bottom: 20px;">
+        This attribute will be added to the <strong>{{ slot.slot_name }}</strong> slot at position {{ order_index + 1 }}.
+    </div>
+
+    <div class="card" style="width: 100%;">
+        <form method="POST">
+            <!-- Option to select existing or create new -->
+            <label for="attribute_mode">Choose Action</label>
+            <select id="attribute_mode" name="attribute_mode" onchange="toggleAttributeMode()" style="margin-bottom: 20px;" data-auto-new="{% if not available_attributes or available_attributes|length == 0 %}true{% else %}false{% endif %}">
+                <option value="existing">Use Existing Attribute</option>
+                <option value="new">Create New Attribute</option>
+            </select>
+
+            <!-- Existing Attribute Selection (shown by default) -->
+            <div id="existing_attribute_section">
+                {% if available_attributes %}
+                    {% if available_attributes|length > 0 %}
+                        <label for="existing_attr_id">Select Attribute</label>
+                        <select id="existing_attr_id" name="existing_attr_id">
+                            <option value="">-- Select an attribute --</option>
+                            {% for attr in available_attributes %}
+                            <option value="{{ attr.attr_id }}">
+                                {{ attr.attr_name }} ({{ attr.attr_type }})
+                                {% if attr.attr_possiblevals %} - Options: {{ attr.attr_possiblevals|join(', ') }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    {% else %}
+                        <div class="empty-state" style="padding: 20px;">
+                            <p>No existing attributes available. All your attributes are already in this slot or you haven't created any yet.</p>
+                            <p style="margin-top: 10px; font-size: 14px;">Please select "Create New Attribute" above.</p>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="empty-state" style="padding: 20px;">
+                        <p>No existing attributes available. All your attributes are already in this slot or you haven't created any yet.</p>
+                        <p style="margin-top: 10px; font-size: 14px;">Please select "Create New Attribute" above.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- New Attribute Form (hidden by default) -->
+            <div id="new_attribute_section" style="display: none;">
+                <label for="attr_name">Attribute Name</label>
+                <input type="text" id="attr_name" name="attr_name" placeholder="e.g., Color, Size, Material">
+
+                <label for="attr_type">Attribute Type</label>
+                <select id="attr_type" name="attr_type">
+                    <option value="string">Text</option>
+                    <option value="number">Number</option>
+                    <option value="bool">Yes/No</option>
+                </select>
+
+                <label for="allowed_values">Allowed Values (optional)</label>
+                <textarea id="allowed_values" name="allowed_values" placeholder="Red, Blue, Green (comma-separated)"></textarea>
+                <p style="font-size: 13px; color: #999; margin-top: -10px; margin-bottom: 15px;">Leave blank to allow any value, or specify comma-separated options</p>
+
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
+                    <input type="checkbox" id="allow_multiple" name="allow_multiple" style="width: auto; margin: 0;">
+                    <label for="allow_multiple" style="margin: 0; font-size: 14px;">Allow multiple values</label>
+                </div>
+            </div>
+
+            <input type="hidden" name="slot_id" value="{{ slot.slot_id }}">
+            <input type="hidden" name="order_index" value="{{ order_index }}">
+
+            <div class="flex" style="gap: 10px; margin-top: 20px;">
+                <a href="/items" class="btn" style="background: transparent; color: #666; border: 1px solid #ddd;">Cancel</a>
+                <button type="submit" class="btn btn-green" style="flex: 1;">Add Attribute to Slot</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleAttributeMode() {
+    var mode = document.getElementById('attribute_mode').value;
+    var existingSection = document.getElementById('existing_attribute_section');
+    var newSection = document.getElementById('new_attribute_section');
+    
+    if (mode === 'existing') {
+        existingSection.style.display = 'block';
+        newSection.style.display = 'none';
+        
+        // Clear new attribute fields
+        document.getElementById('attr_name').value = '';
+        document.getElementById('attr_type').value = 'string';
+        document.getElementById('allowed_values').value = '';
+        document.getElementById('allow_multiple').checked = false;
+        
+        // Make existing required, new not required
+        var existingSelect = document.getElementById('existing_attr_id');
+        if (existingSelect) {
+            existingSelect.required = true;
+        }
+        document.getElementById('attr_name').required = false;
+    } else {
+        existingSection.style.display = 'none';
+        newSection.style.display = 'block';
+        
+        // Clear existing selection
+        var existingSelect = document.getElementById('existing_attr_id');
+        if (existingSelect) {
+            existingSelect.value = '';
+            existingSelect.required = false;
+        }
+        
+        // Make new required
+        document.getElementById('attr_name').required = true;
+    }
+}
+
+// Initialize on page load
+window.addEventListener('load', function() {
+    var modeSelect = document.getElementById('attribute_mode');
+    var autoSwitchToNew = modeSelect.getAttribute('data-auto-new');
+    
+    if (autoSwitchToNew === 'true') {
+        modeSelect.value = 'new';
+        toggleAttributeMode();
+    }
+});
+</script>
+{% endblock %}

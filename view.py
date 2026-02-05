@@ -596,39 +596,57 @@ def add_attribute():
     order_index = int(request.args.get("order_index", 0))
 
     if request.method == "POST":
-        attr_name = request.form.get("attr_name", "").strip()
-        attr_type = request.form.get("attr_type", "string")
-        allowed_values = request.form.get("allowed_values", "")
-        allow_multiple = request.form.get("allow_multiple") == "on"
+        attribute_mode = request.form.get("attribute_mode", "existing")
         slot_id = request.form.get("slot_id")
         order_index = int(request.form.get("order_index", 0))
 
-        if not attr_name:
-            flash("Attribute name is required.")
-            return redirect(request.referrer)
+        # Shift existing attributes at or after this order_index
+        existing_attr_slots = supabase.table("attr_slots").select("*").eq("slot_id", slot_id).gte("order_index", order_index).execute().data
+        for as_rel in existing_attr_slots:
+            supabase.table("attr_slots").update({"order_index": as_rel["order_index"] + 1}).eq("attr_slot_id", as_rel["attr_slot_id"]).execute()
 
-        # Parse allowed values
-        allowed_values_list = None
-        if allowed_values.strip():
-            allowed_values_list = [v.strip() for v in allowed_values.split(",") if v.strip()]
+        if attribute_mode == "existing":
+            # Use existing attribute
+            existing_attr_id = request.form.get("existing_attr_id")
+            
+            if not existing_attr_id:
+                flash("Please select an attribute.")
+                return redirect(request.referrer)
+            
+            # Create attr_slot relationship
+            supabase.table("attr_slots").insert({
+                "user_id": user_id,
+                "attr_id": existing_attr_id,
+                "slot_id": slot_id,
+                "order_index": order_index
+            }).execute()
 
-        # Create attribute
-        new_attr = supabase.table("attributes").insert({
-            "user_id": user_id,
-            "attr_name": attr_name,
-            "attr_type": attr_type,
-            "attr_possiblevals": allowed_values_list,
-            "allow_multiple": allow_multiple
-        }).execute()
+        else:
+            # Create new attribute
+            attr_name = request.form.get("attr_name", "").strip()
+            attr_type = request.form.get("attr_type", "string")
+            allowed_values = request.form.get("allowed_values", "")
+            allow_multiple = request.form.get("allow_multiple") == "on"
 
-        attr_id = new_attr.data[0]["attr_id"]
+            if not attr_name:
+                flash("Attribute name is required.")
+                return redirect(request.referrer)
 
-        # If slot_id is provided, link it to the slot
-        if slot_id:
-            # Shift existing attributes at or after this order_index
-            existing_attr_slots = supabase.table("attr_slots").select("*").eq("slot_id", slot_id).gte("order_index", order_index).execute().data
-            for as_rel in existing_attr_slots:
-                supabase.table("attr_slots").update({"order_index": as_rel["order_index"] + 1}).eq("attr_slot_id", as_rel["attr_slot_id"]).execute()
+            # Parse allowed values
+            allowed_values_list = None
+            if allowed_values.strip():
+                allowed_values_list = [v.strip() for v in allowed_values.split(",") if v.strip()]
+
+            # Create attribute
+            new_attr = supabase.table("attributes").insert({
+                "user_id": user_id,
+                "attr_name": attr_name,
+                "attr_type": attr_type,
+                "attr_possiblevals": allowed_values_list,
+                "allow_multiple": allow_multiple
+            }).execute()
+
+            attr_id = new_attr.data[0]["attr_id"]
 
             # Create attr_slot relationship
             supabase.table("attr_slots").insert({
@@ -638,9 +656,7 @@ def add_attribute():
                 "order_index": order_index
             }).execute()
 
-            return redirect("/items")
-
-        return redirect("/attributes")
+        return redirect("/items")
 
     # If adding to a specific slot, get slot info
     slot = None
@@ -648,8 +664,28 @@ def add_attribute():
         slot_data = supabase.table("slots").select("*").eq("slot_id", slot_id).eq("user_id", user_id).execute().data
         if slot_data:
             slot = slot_data[0]
+        else:
+            flash("Slot not found.")
+            return redirect("/items")
+    else:
+        flash("No slot specified.")
+        return redirect("/items")
 
-    return render_template("add_attribute.html", slot=slot, order_index=order_index)
+    # Get all user's attributes
+    all_user_attributes = supabase.table("attributes").select("*").eq("user_id", user_id).execute().data
+    
+    # Get attributes already in this slot
+    existing_attr_slots = supabase.table("attr_slots").select("attr_id").eq("slot_id", slot_id).execute().data
+    existing_attr_ids = [as_rel["attr_id"] for as_rel in existing_attr_slots]
+    
+    # Filter to only show attributes NOT already in this slot
+    available_attributes = [attr for attr in all_user_attributes if attr["attr_id"] not in existing_attr_ids]
+
+    return render_template("attribute_form.html", 
+                         attribute=None, 
+                         slot=slot, 
+                         order_index=order_index,
+                         available_attributes=available_attributes)
 
 
 # -------------------------------------------------------
