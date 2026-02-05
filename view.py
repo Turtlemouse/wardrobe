@@ -496,7 +496,7 @@ def add_item():
         if attr:
             attributes.append(attr[0])
 
-    return render_template("add_item.html", slot=slot[0], attributes=attributes)
+    return render_template("item_form.html", slot=slot[0], attributes=attributes)
 
 
 @app.route("/items/edit/<item_id>", methods=["GET", "POST"])
@@ -559,7 +559,7 @@ def edit_item(item_id):
     attr_items = supabase.table("attr_items").select("*").eq("item_id", item_id).eq("user_id", user_id).execute().data
     attr_values = {ai["attr_id"]: ai["value"] for ai in attr_items}
 
-    return render_template("edit_item.html", item=item, slot=slot, attributes=attributes, attr_values=attr_values)
+    return render_template("item_form.html", item=item, slot=slot, attributes=attributes, attr_values=attr_values)
 
 
 @app.route("/items/delete/<item_id>", methods=["POST"])
